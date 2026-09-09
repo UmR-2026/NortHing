@@ -137,7 +137,7 @@ R44a/b/c/g, R45a/b/c/e/f, R46a/b/c/d/f/g, R47a/b/c/d/f/g, R48a/c/d/e/f/g, R49a-e
 - 6 plan yaml: `docs/superpowers/plans/round4[4-9]-*-2026-07-07.yaml`
 - R40-R42 plan: `docs/superpowers/plans/round40-r50-rework-with-step37flash-2026-07-06.md` (顶层 R40-R50 design doc)
 - R43 plan: `docs/superpowers/plans/round43-6-way-parallel-2026-07-07.yaml` (已派, running)
-- R43 plan state: `C:\Users\UmR\.mavis\plans\plan_6d824461\` (mavis plan engine state dir)
+- R43 plan state: `<LOCAL_PATH>` (mavis plan engine state dir)
 
 ---
 

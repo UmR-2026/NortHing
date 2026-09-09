@@ -63,20 +63,20 @@
 
 ## 验证命令与输出原文
 
-### 1. `C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo check -p northhing`
+### 1. `<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo check -p northhing`
 
 ```text
     Checking northhing v0.2.10 (E:\agent-project\northing\src\apps\desktop)
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 7.52s
 ```
 
-### 2. `C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo build -p northhing`
+### 2. `<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo build -p northhing`
 
 ```text
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 19.26s
 ```
 
-### 3. `C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing --lib`
+### 3. `<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing --lib`
 
 ```text
 running 165 tests
@@ -89,7 +89,7 @@ test ui_dioxus::api::tests::test_spawn_on_turn_runtime_behavior ... ok
 test result: ok. 165 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.45s
 ```
 
-### 4. `C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo check --workspace`
+### 4. `<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo check --workspace`
 
 ```text
     Checking northhing-core v0.2.10 (E:\agent-project\northing\src\crates\assembly\core)

@@ -104,7 +104,7 @@ pub fn event_channel() -> tokio::sync::mpsc::Receiver<KernelEventDto>
 
 环境陷阱：GNU toolchain 在 `TEMP=C:\WINDOWS\TEMP` 下 linker 必崩（ld response file bug）。先设：
 ```powershell
-$env:TEMP = "C:\Users\UmR\AppData\Local\Temp"; $env:TMP = $env:TEMP
+$env:TEMP = "<LOCAL_PATH>"; $env:TMP = $env:TEMP
 ```
 
 ```powershell

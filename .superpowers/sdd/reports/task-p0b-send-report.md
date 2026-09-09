@@ -25,7 +25,7 @@ None.
 ### 1. `cargo check -p northhing --features ui-dioxus`
 
 ```
-$env:TEMP = "C:\Users\UmR\AppData\Local\Temp"; $env:TMP = $env:TEMP
+$env:TEMP = "<LOCAL_PATH>"; $env:TMP = $env:TEMP
 cd E:\agent-project\northing
 cargo check -p northhing --features ui-dioxus
 
@@ -401,7 +401,7 @@ warning: `northhing` (bin "northhing") generated 36 warnings (run `cargo fix --b
 ### 2. `cargo test -p northhing --features ui-dioxus --lib ui_dioxus`
 
 ```
-$env:TEMP = "C:\Users\UmR\AppData\Local\Temp"; $env:TMP = $env:TEMP
+$env:TEMP = "<LOCAL_PATH>"; $env:TMP = $env:TEMP
 $env:PATH = "C:\msys64\mingw64\bin;$env:PATH"
 cd E:\agent-project\northing
 cargo test -p northhing --features ui-dioxus --lib ui_dioxus

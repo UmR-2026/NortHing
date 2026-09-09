@@ -42,7 +42,7 @@ pub async fn set_mcp_enabled(server: MCPServerDto, enabled: bool) -> Result<(), 
 ## 验证（必跑并贴输出）
 
 ```powershell
-$env:TEMP = "C:\Users\UmR\AppData\Local\Temp"; $env:TMP = $env:TEMP
+$env:TEMP = "<LOCAL_PATH>"; $env:TMP = $env:TEMP
 cd E:\agent-project\northing
 cargo check -p northhing --features ui-dioxus
 cargo test -p northhing --features ui-dioxus --lib ui_dioxus

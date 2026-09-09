@@ -45,14 +45,14 @@ test result: FAILED. 1068 passed; 1 failed; 1 ignored
 ## Global Constraints
 
 - 安全敏感路径：符号链接必须仍然既不被列出也不被跟随——只允许调整检查顺序，禁止削弱围栏。
-- cargo 一律 `C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo ...`；长命令 PTY + cmd 重定向；不 kill 任何非 northhing 进程。
+- cargo 一律 `<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo ...`；长命令 PTY + cmd 重定向；不 kill 任何非 northhing 进程。
 - 家规：就近 AGENTS.md 优先（src/crates/assembly/core/AGENTS.md）。
 
 ## 验证（命令 + 输出原文进 report）
 
 ```powershell
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-core w9_6
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --lib
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing-core w9_6
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --lib
 ```
 
 说明：本机无符号链接权限，`list_tree_skips_symlink_to_outside_target` 本地只会走早退路径——本地绿是必要条件不是充分条件，最终验收靠 CI（编排者负责推分支观测）。report 里如实标注这一点。

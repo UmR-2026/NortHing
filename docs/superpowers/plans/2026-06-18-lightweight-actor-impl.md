@@ -16,7 +16,7 @@
 
 **Working directory:** `E:\agent-project\agent-app-v3`
 **Branch:** `v3-restructure`
-**Toolchain:** `set PATH=C:\Users\UmR\.cargo\bin;C:\Users\UmR\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin;%PATH%` *before every cargo command* — GNU toolchain ahead of MSVC in PATH breaks `getrandom`/`aws-lc-rs` with `dlltool.exe not found`.
+**Toolchain:** `set PATH=<LOCAL_PATH>` *before every cargo command* — GNU toolchain ahead of MSVC in PATH breaks `getrandom`/`aws-lc-rs` with `dlltool.exe not found`.
 
 ---
 

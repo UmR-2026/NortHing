@@ -52,7 +52,7 @@ EXITCODE=0
 ```
 （输出为空；brief 引用的两条 `Cargo.toml:50` 违规行不再出现。）
 
-### 2. `C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-services-integrations`
+### 2. `<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing-services-integrations`
 
 ```
 Finished `test` profile [unoptimized + debuginfo] target(s) in 0.55s
@@ -138,7 +138,7 @@ CHECKER_RC=0
 ```
 （输出为空，原 `Cargo.toml:50` 两条违规均消失。）
 
-### 2. `C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-services-integrations`
+### 2. `<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing-services-integrations`
 
 ```
     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.50s
@@ -153,7 +153,7 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-### 3. `C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-services-integrations --features file-watch`
+### 3. `<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing-services-integrations --features file-watch`
 
 ```
    Compiling northhing-services-integrations v0.2.10 (E:\agent-project\northing\src\crates\services\services-integrations)

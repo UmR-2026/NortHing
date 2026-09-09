@@ -18,7 +18,7 @@
 ### Verification 1: i18n Test (`cargo test -p northhing-core --features product-full --lib service::i18n`)
 
 ```
-$env:TEMP='C:\Users\UmR\AppData\Local\Temp'; $env:TMP=$env:TEMP
+$env:TEMP='<LOCAL_PATH>'; $env:TMP=$env:TEMP
 & "$env:USERPROFILE\.cargo\bin\cargo.exe" +stable-msvc test -p northhing-core --features product-full --lib service::i18n
 
    Compiling northhing-core v0.2.10 (E:\agent-project\northing\src\crates\assembly\core)
@@ -183,7 +183,7 @@ Core boundary check passed.
 ### Verification 3: Services-Integrations Compile Check (`cargo check -p northhing-services-integrations --features product-full`)
 
 ```
-$env:TEMP='C:\Users\UmR\AppData\Local\Temp'; $env:TMP=$env:TEMP; & "$env:USERPROFILE\.cargo\bin\cargo.exe" "+stable-msvc" check -p northhing-services-integrations --features product-full
+$env:TEMP='<LOCAL_PATH>'; $env:TMP=$env:TEMP; & "$env:USERPROFILE\.cargo\bin\cargo.exe" "+stable-msvc" check -p northhing-services-integrations --features product-full
 
     Checking scopeguard v1.2.0
     Checking stable_deref_trait v1.2.1

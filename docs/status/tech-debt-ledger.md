@@ -255,7 +255,7 @@
 - **Symptom**: hygiene 全仓 fallback 口径下约 170 个历史文件（归档文档与测试 fixture）含本地绝对路径，无 HEAD^1 浅克隆环境触发全量扫描时 repo-hygiene 报错；口径恢复后正常单次提交不触发。
 - **Evidence**: GitHub Actions CI run 33982832690（2026-09-05），`repo-hygiene` 因 `actions/checkout` 默认 `fetch-depth: 1` 导致 `HEAD^1` 不存在，走到 `scripts/check-repo-hygiene.mjs` 全仓 trackedFiles fallback 分支，约 170 个历史存量文件报绝对路径违规。
 - **Proposed fix**: 存量脱敏或规则豁免（如归档路径/测试数据排除），待拍板。
-- **Status**: `deferred` — 存量脱敏或规则豁免待拍板；关联：W17-2 口径修复（ci.yml repo-hygiene 改 fetch-depth: 2，check-repo-hygiene.mjs 增加 fallback fail-loud warning）。
+- **Status**: resolved (2026-09-08, W20-2 — 用户 2026-09-08 拍板混合方案：check-repo-hygiene.mjs 豁免 docs/archive/ 目录 local-path 扫描保持归档历史冻结；非 archive 存量 75 个文件全部脱敏，local-path 替换为 <LOCAL_PATH>，token 替换为 <TOKEN>)
 
 ## Change Protocol
 

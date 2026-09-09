@@ -26,7 +26,7 @@ DONE_WITH_CONCERNS
 
 ### cargo test settings / keyring
 ```
-$env:TEMP = "C:\Users\UmR\AppData\Local\Temp"; $env:TMP = $env:TEMP
+$env:TEMP = "<LOCAL_PATH>"; $env:TMP = $env:TEMP
 cargo test -p northhing --lib settings
 cargo test -p northhing --lib keyring
 ```

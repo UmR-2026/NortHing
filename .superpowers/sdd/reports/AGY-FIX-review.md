@@ -1,6 +1,6 @@
 # AGY-FIX Review — opencode antigravity fork 四连修（429 挂死）
 
-- 仓库：`C:\Users\UmR\Desktop\opencode-antigravity-auth-fork`
+- 仓库：`<LOCAL_PATH>`
 - BASE `dc66228` → HEAD `bbbc28f`（含 `fab45f2`，双 commit）
 - 派发 brief：fork `AGY-FIX-brief.md`；实现者报告：fork `AGY-FIX-report.md`
 - 上游证据：NortHing `.superpowers/sdd/reports/agy-429-path-review.md` + `agy-resolution-review.md`

@@ -52,7 +52,7 @@ W2.7 卡语法，可折到标题：
 
 ## 4. 验证
 
-1. rustup：`C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo check -p northhing` 再 `cargo build -p northhing`（临时 DIOXUS_SHELL=true）
+1. rustup：`<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo check -p northhing` 再 `cargo build -p northhing`（临时 DIOXUS_SHELL=true）
 2. CDP：Hidden + port 9333。点 `#nav-archive`。截图：
    - `C:\WINDOWS\TEMP\opencode\t7-shots\e1-archive-dark.png`
    - `e1-archive-light.png`（窗内主题钮或 room 主题同步后重截）

@@ -73,7 +73,7 @@ starved for 40× its deadline).
 | init_core blocks / MCP / ENV_LOCK | `worker:init-core-ok t+153ms` every run (round-3 log line 33) |
 | Render body hangs | all `R:*`, `E:mount-*` tags complete ≤ t+840 ms |
 | `list_sessions` scan is the CPU hog | timeout(8s) never polled + all non-main threads 0 % CPU |
-| Corrupt WebView2 user-data dir | renamed `C:\Users\UmR\AppData\Local\northhing-dioxus-dev` → identical hang on fresh dir (restored afterwards) |
+| Corrupt WebView2 user-data dir | renamed `<LOCAL_PATH>` → identical hang on fresh dir (restored afterwards) |
 | Hang is deterministic | 4/4 runs, same last tag, 100 % repro |
 
 ## Unresolved contradiction & next probes (for orchestrator)
@@ -175,7 +175,7 @@ status: DONE
 
 **`src/crates/services/services-core/src/json_store.rs:104`（生产行号）
 `tokio::fs::read_to_string(path).await`，目标文件：**
-`C:\Users\UmR\.northhing\projects\e-agent-project-northing-4e5a8212262a2103\sessions\5da38044-71dd-4170-94b8-36a447f9de4e\state.json`
+`<LOCAL_PATH>`
 （ws#2 = `E:\agent-project\NortHing` 的 69 个会话中排序第 53 个的 state 文件）
 
 poll 计数全景（diag 运行，kill 前）：

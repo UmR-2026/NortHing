@@ -199,7 +199,7 @@ impl Drop for DisposalGuard { fn drop(&mut self) { /* 幂等反注册 */ } }
 
 - 侦察报告 A（Cordis 核心机制）：`C:\WINDOWS\TEMP\opencode\cordis-recon.md`
 - 侦察报告 B（dsh 热重载 + 组装）：`C:\WINDOWS\TEMP\opencode\dsh-recon.md`
-- 源码（npx 缓存，只读）：`C:\Users\UmR\AppData\Local\npm-cache\_npx\1e7f6d9597241db0\node_modules\@deepseek-ai\{cordis,cordis-plugin-hmr,cordis-plugin-loader,dsh-app-boot,dsh-scope,dsh-typert-*}\`
+- 源码（npx 缓存，只读）：`<LOCAL_PATH>`
 - northhing 现状：`src/crates/execution/tool-contracts/src/framework/registry.rs`、`src/crates/assembly/core/src/agentic/{tools,agents}/registry/`
 
 ---

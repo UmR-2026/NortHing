@@ -13,7 +13,7 @@ Fixed the `turn_batch::load_session_tail_turns_uses_metadata_turn_count_as_norma
 let turns_dir = workspace_path.join("sessions").join(session_id).join("turns");
 ```
 
-However, turn files are stored under `project_sessions_dir(workspace_path)`, not `workspace_path.join("sessions")`. The `project_sessions_dir` path is `~/.northhing/projects/<workspace-slug>/sessions/`, while `workspace_path.join("sessions")` is a completely different path (e.g., `E:\temp\testworkspace\sessions\`).
+However, turn files are stored under `project_sessions_dir(workspace_path)`, not `workspace_path.join("sessions")`. The `project_sessions_dir` path is `~/.northhing/projects/<workspace-slug>/sessions/`, while `workspace_path.join("sessions")` is a completely different path (e.g., `<LOCAL_PATH>`).
 
 This caused `audit_turn_parent_links` to check the wrong directory for turn files, finding no files and reporting gaps [0, 1, 2, 3, 4], which triggered the fallback path instead of the fast metadata-driven path.
 

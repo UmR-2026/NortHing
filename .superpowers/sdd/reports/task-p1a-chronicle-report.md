@@ -17,8 +17,8 @@ DONE
 
 ### 1. 编译检查 (`cargo check -p northhing --features ui-dioxus`)
 ```powershell
-$env:TEMP = "C:\Users\UmR\AppData\Local\Temp"; $env:TMP = $env:TEMP
-& "C:\Users\UmR\.cargo\bin\rustup.exe" run stable-x86_64-pc-windows-msvc cargo check -p northhing --features ui-dioxus
+$env:TEMP = "<LOCAL_PATH>"; $env:TMP = $env:TEMP
+& "<LOCAL_PATH>" run stable-x86_64-pc-windows-msvc cargo check -p northhing --features ui-dioxus
 ```
 
 ```
@@ -30,8 +30,8 @@ $env:TEMP = "C:\Users\UmR\AppData\Local\Temp"; $env:TMP = $env:TEMP
 
 ### 2. 单元测试 (`cargo test -p northhing --features ui-dioxus -- ui_dioxus::app::tests`)
 ```powershell
-$env:TEMP = "C:\Users\UmR\AppData\Local\Temp"; $env:TMP = $env:TEMP
-& "C:\Users\UmR\.cargo\bin\rustup.exe" run stable-x86_64-pc-windows-msvc cargo test -p northhing --features ui-dioxus -- ui_dioxus::app::tests
+$env:TEMP = "<LOCAL_PATH>"; $env:TMP = $env:TEMP
+& "<LOCAL_PATH>" run stable-x86_64-pc-windows-msvc cargo test -p northhing --features ui-dioxus -- ui_dioxus::app::tests
 ```
 
 ```

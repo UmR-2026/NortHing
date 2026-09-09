@@ -97,7 +97,7 @@ Commit 拆分：
 Rot budget verification passed (5 grep rules [unwrap_production=483/502, expect_production=940/1089, let_underscore=372/388, unix_epoch_inline=69/69, allow_dead_code=106/109], 3 dir rules [dir_entries:scripts=42/42, dir_entries:docs/design=1/1, dir_entries:.superpowers/sdd=49/400], 6 god-file rules checked across 1368 files).
 ```
 
-### 6.2 `C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo check --workspace`
+### 6.2 `<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo check --workspace`
 
 ```text
 warning: private item shadows public glob re-export
@@ -634,7 +634,7 @@ warning: `northhing-cli` (bin "northhing-cli") generated 1 warning (run `cargo f
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.92s
 ```
 
-### 6.3 `C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full memory_db`
+### 6.3 `<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full memory_db`
 
 ```text
 warning: private item shadows public glob re-export

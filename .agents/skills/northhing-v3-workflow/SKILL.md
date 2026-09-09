@@ -25,11 +25,11 @@ This skill encodes the workflow used during northhing v3 prompt loading refactor
 
 **Rust toolchain (CRITICAL)**:
 - `rustup MSVC 1.96.0` (`stable-x86_64-pc-windows-msvc`)
-- `C:\Users\UmR\.cargo\bin` MUST be first in PATH (rustup shim)
+- `<LOCAL_PATH>` MUST be first in PATH (rustup shim)
 - If `C:\Program Files\Rust stable GNU 1.95\bin` is first, `cargo build` will fail with `dlltool.exe not found`
 - Workaround at the start of every shell:
   ```bash
-  set "PATH=C:\Users\UmR\.cargo\bin;%PATH%"
+  set "PATH=<LOCAL_PATH>"
   cargo build -p northhing-core
   ```
 
@@ -212,7 +212,7 @@ These are the same skills the v3 work used. Use them.
 ## TL;DR for parallel workers
 
 - Worktree: `E:\agent-project\northhing-v3` (v3-restructure)
-- Rust: rustup MSVC 1.96 + `set "PATH=C:\Users\UmR\.cargo\bin;%PATH%"` first
+- Rust: rustup MSVC 1.96 + `set "PATH=<LOCAL_PATH>"` first
 - Pattern: `const FLAG` + if/else + regression test + commit + PROJECT_STATE update
 - Tests: 821+ must pass
 - Don't: northhing-desktop build, v1 docs, push

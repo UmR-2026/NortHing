@@ -1,6 +1,6 @@
 # Review Package — AGY-FIX（agy 渠道 3.7/3.8 flash 修复）
 
-- 仓库：`C:\Users\UmR\Desktop\opencode-antigravity-auth-fork`（**不是** NortHing）
+- 仓库：`<LOCAL_PATH>`（**不是** NortHing）
 - BASE `dc66228` → HEAD `bbbc28f`（含 `fab45f2`；diff = `git diff dc66228..bbbc28f`）
 - brief：`<fork>/AGY-FIX-brief.md`；report：`<fork>/AGY-FIX-report.md`
 - 上游证据：`.superpowers/sdd/reports/agy-429-path-review.md` + `agy-resolution-review.md`（NortHing 仓）

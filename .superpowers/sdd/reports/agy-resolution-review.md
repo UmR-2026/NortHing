@@ -1,6 +1,6 @@
 # AGY Resolution Review - opencode-antigravity-auth-fork
 
-Date: 2026-09-04. Read-only review of C:\Users\UmR\Desktop\opencode-antigravity-auth-fork (src/).
+Date: 2026-09-04. Read-only review of <LOCAL_PATH> (src/).
 Question: why did `antigravity-gemini-3.8-flash` and `antigravity-gemini-3.7-flash` get HTTP 429 with ~70s reset windows despite cached remainingFraction 0.92?
 
 ## Q1. Model id mapping (`antigravity-gemini-3.8-flash` -> upstream name)

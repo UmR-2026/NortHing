@@ -32,7 +32,7 @@
 
 ### 验证 1：Desktop 编译门禁（家规 #6）
 ```powershell
-C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo check -p northhing
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo check -p northhing
 ```
 输出摘录：
 ```text
@@ -43,7 +43,7 @@ C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo check
 
 ### 验证 2：单测全绿（19/19 通过，含 6 条 XSS 注入向量）
 ```powershell
-C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing --lib markdown_render
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing --lib markdown_render
 ```
 输出摘录：
 ```text
@@ -79,7 +79,7 @@ git diff --check
 
 ### 验证 4：Workspace 整体编译与 Repo Hygiene
 ```powershell
-C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo check --workspace
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo check --workspace
 pnpm run check:repo-hygiene
 ```
 输出：编译通过，Repository hygiene check passed。

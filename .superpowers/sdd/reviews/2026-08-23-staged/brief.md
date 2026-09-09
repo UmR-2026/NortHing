@@ -18,7 +18,7 @@
 | F3 | `SkillWatchService::sync_watched_paths` 加 `sync_lock` 互斥防双 watcher，附并发回归测试 | `core/service/skill_watch.rs` + `_tests.rs` |
 | F4 | CLI 方案 C 对等：`keyring_keys` 模块在 config init 后、factory init 前把 keyring keys 推入 core 内存；模型 add/edit 表单存 key、编辑留空继承 keyring key；keyring 服务名常量下沉 core `infrastructure/keyring.rs`（desktop 改引，单一事实源） | `cli/src/keyring_keys.rs`、`cli/main.rs`、`cli/ui/startup/selectors.rs`、`cli/Cargo.toml`、`core/infrastructure/keyring.rs`、`core/infrastructure/mod.rs`、`desktop/settings/keyring.rs` |
 | F5 | 删死契约 `update_global_config` + `GlobalConfigPatchDto`（零调用方） | `contracts/kernel-api/settings.rs`、`lib.rs`、`core/kernel_facade/settings.rs` |
-| 凭据清理 | 测试 fixture 假钥匙不再硬编码：`"test-key"` ×20 → `fixture_api_key()`（env `NORTHHING_TEST_API_KEY` 注入、默认空；值不得进断言）；`responses.rs:136` 同法；`mgr_load_tests.rs` 的 `sk-ant-plaintext-secret-…` 改运行时构建变量（断言同源引用，scrub 语义不变） | ai-adapters tests、responses.rs、mgr_load_tests.rs |
+| 凭据清理 | 测试 fixture 假钥匙不再硬编码：`"test-key"` ×20 → `fixture_api_key()`（env `NORTHHING_TEST_API_KEY` 注入、默认空；值不得进断言）；`responses.rs:136` 同法；`mgr_load_tests.rs` 的 `<TOKEN>-…` 改运行时构建变量（断言同源引用，scrub 语义不变） | ai-adapters tests、responses.rs、mgr_load_tests.rs |
 
 ## Constraints（仓库硬规则，逐条核）
 

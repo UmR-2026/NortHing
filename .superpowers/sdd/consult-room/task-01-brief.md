@@ -57,7 +57,7 @@
    # 运行（同一 shell 保留上述 CARGO 环境变量；必须走 rustup run MSVC，本目录有 GNU override 会导致 ring 链接失败）
    rustup run stable-x86_64-pc-windows-msvc cargo run -p northhing
    # 另开 shell 截图/点击（必须用独立 powershell 进程，避免 Add-Type 类型冲突）
-   powershell -NoProfile -File 'C:\Users\UmR\.local\share\opencode\worktree\16ba4143154c219fe7f43650ae6f4d297aa32c23\visual-iter\.opencode\tools\shot-window.ps1' -OutFile '<abs path>.png'
+   powershell -NoProfile -File '<LOCAL_PATH>' -OutFile '<abs path>.png'
    powershell -NoProfile -File '...\click-window.ps1' -X <int> -Y <int>   # 需要点击导航/切主题时
    # 若截图被全屏应用遮挡：先 ShowWindow 最小化遮挡窗口；应用改 build 后需 kill 重启 northhing.exe
    ```

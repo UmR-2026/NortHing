@@ -63,9 +63,9 @@
 仓库根 `E:\agent-project\NortHing`：
 
 ```
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo check -p northhing
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing --lib --test desktop_uninit_a --test desktop_uninit_b
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo build -p northhing
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo check -p northhing
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing --lib --test desktop_uninit_a --test desktop_uninit_b
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo build -p northhing
 ```
 
 （编排者已在 BASE `05bbd40` 预跑前两条，基线绿；第三条 = 运行验证的构建步骤。）

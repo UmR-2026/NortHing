@@ -51,7 +51,7 @@
 ### 1. `cargo check -p northhing`
 
 ```
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo check -p northhing
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo check -p northhing
     Checking northhing v0.2.10 (E:\agent-project\northing\src\apps\desktop)
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 12.24s
 ```
@@ -59,7 +59,7 @@ C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo check
 ### 2. `cargo test -p northhing --lib --test desktop_uninit_a --test desktop_uninit_b`
 
 ```
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing --lib --test desktop_uninit_a --test desktop_uninit_b
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing --lib --test desktop_uninit_a --test desktop_uninit_b
 test result: ok. 166 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.51s
      Running tests\desktop_uninit_a.rs (target\debug\deps\desktop_uninit_a-dc906f2c136ee0a3.exe)
 running 1 test
@@ -74,7 +74,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 ### 3. `cargo build -p northhing`
 
 ```
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo build -p northhing
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo build -p northhing
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.15s
 ```
 

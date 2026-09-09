@@ -191,7 +191,7 @@ goes in `plan: {}` wrapper. `version: 1` is required literal at root. CLI drops
 
 To debug future "Invalid plan":
 1. `py -c "import yaml; yaml.safe_load(open('plan.yaml'))"` confirm YAML syntax
-2. Compare against working `C:\temp\smoke-plan-v2.yaml`
+2. Compare against working `<LOCAL_PATH>`
 3. Read `daemon.js:241168` `PlanSchema` definition
 
 ### Line count measurement discrepancy (QClaw vs Mavis)

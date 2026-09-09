@@ -82,7 +82,7 @@
 **新增：opencode zen 免费档（用户指定优先使用这两个）**：
 - opencode/deepseek-v4-flash-free —— 与原 volcengine dv4f 同模型的免费档，能力画像沿用本文件"dv4f 适合搬移类"的结论。
 - opencode/ling-3.0-flash-free —— 蚂蚁 Ling 3.0 flash，本项目**尚无实测画像**，首次派发按未知档处理（给足规格、优先机械型任务、准备多一轮修复）。
-- zen 已在 `C:\Users\UmR\.local\share\opencode\auth.json` 认证（provider key `opencode`），无需再配 provider。
+- zen 已在 `<LOCAL_PATH>` 认证（provider key `opencode`），无需再配 provider。
 - 已创建子代理定义（**config 不热重载，必须重启 opencode 才可见**）：
   - `~/.config/opencode/agent/general/deepseek-v4-flash-free_general.md`
   - `~/.config/opencode/agent/general/ling-3.0-flash-free_general.md`

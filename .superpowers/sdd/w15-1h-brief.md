@@ -64,8 +64,8 @@ rusqlite 既有能力（无需新依赖）：`Connection::busy_timeout(Duration)
 在仓库根 `E:\agent-project\NortHing` 执行（Windows 下 cargo 走 rustup 前缀）：
 
 ```
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full memory_db
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo check --workspace
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full memory_db
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo check --workspace
 ```
 
 （与 CI 有效 feature 集一致：`cargo test --locked --workspace` 靠 workspace feature 统一从 desktop consumer 带上 `product-full`；单测 `-p northhing-core` 必须显式 `--features product-full`，否则裸 default 编译不过（已知缺口，编排者已在 BASE 实证）。编排者已在 BASE 上预跑第一条，基线绿。）

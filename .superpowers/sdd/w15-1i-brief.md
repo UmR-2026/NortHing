@@ -58,7 +58,7 @@ codegraph blast radius（编排者代查）：`read_optional` 2 调用方、`wri
 5. **注释勘误**：`entry.rs:179-196` 的 r3p4 注释改写为与 trace 报告一致的新结论（poison = 返回 Pending 却被执行器高频重 poll 的 busy-wake future + busy-poll 期间 tokio 时间驱动冻结；sleeping use_future 无害——实验 D/E 平反）。注释只改事实，不改风格。
 6. **运行验证**（修复前 4/4 必挂）：
    ```
-   C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo build -p northhing
+   <LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo build -p northhing
    ```
    然后启动 `target\debug\northhing.exe`，观察 60–90s：`(Get-Process northhing).Responding` 为 True、主线程/进程 CPU 不钉 100% 单核、窗口内容完成加载（用 `C:\WINDOWS\TEMP\opencode\win-shot.ps1` 拍窗口截图，截图路径进 report）。进程观察完用 `Stop-Process` 收掉。
 
@@ -82,8 +82,8 @@ codegraph blast radius（编排者代查）：`read_optional` 2 调用方、`wri
 仓库根 `E:\agent-project\NortHing`：
 
 ```
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-services-core json_store
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo check --workspace
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing-services-core json_store
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo check --workspace
 ```
 
 （CI 有效 feature 集：workspace 统一编译。`cargo check --workspace` 已覆盖 `cargo check -p northhing` 桌面门。编排者已在 BASE `9b41eac` 预跑第一条。）

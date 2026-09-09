@@ -44,8 +44,8 @@ CI 用 `cargo test --locked --workspace`（ci.yml:96）经 feature 统一隐式�
 本地最小等价复现 = 显式补 `--features product-full`：
 
 ```powershell
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-core w9_6 --features product-full
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --lib --features product-full
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing-core w9_6 --features product-full
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --lib --features product-full
 ```
 
 命令 1（12 个 w9_6 用例全绿，含目标用例）：

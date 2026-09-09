@@ -30,8 +30,8 @@ DONE
 
 ### 1. 编译检查 (`cargo check -p northhing --features ui-dioxus`)
 ```powershell
-$env:TEMP = "C:\Users\UmR\AppData\Local\Temp"; $env:TMP = $env:TEMP
-& "C:\Users\UmR\.cargo\bin\rustup.exe" run stable-x86_64-pc-windows-msvc cargo check -p northhing --features ui-dioxus
+$env:TEMP = "<LOCAL_PATH>"; $env:TMP = $env:TEMP
+& "<LOCAL_PATH>" run stable-x86_64-pc-windows-msvc cargo check -p northhing --features ui-dioxus
 ```
 
 ```
@@ -400,8 +400,8 @@ warning: `northhing` (bin "northhing") generated 35 warnings (run `cargo fix --b
 
 ### 2. Dioxus 模块单测 (`cargo test -p northhing --features ui-dioxus --lib ui_dioxus`)
 ```powershell
-$env:TEMP = "C:\Users\UmR\AppData\Local\Temp"; $env:TMP = $env:TEMP
-& "C:\Users\UmR\.cargo\bin\rustup.exe" run stable-x86_64-pc-windows-msvc cargo test -p northhing --features ui-dioxus --lib ui_dioxus
+$env:TEMP = "<LOCAL_PATH>"; $env:TMP = $env:TEMP
+& "<LOCAL_PATH>" run stable-x86_64-pc-windows-msvc cargo test -p northhing --features ui-dioxus --lib ui_dioxus
 ```
 
 ```
@@ -567,8 +567,8 @@ test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 110 filtered out; f
 
 ### 3. Settings 全量单测 (`cargo test -p northhing --lib settings`)
 ```powershell
-$env:TEMP = "C:\Users\UmR\AppData\Local\Temp"; $env:TMP = $env:TEMP
-& "C:\Users\UmR\.cargo\bin\rustup.exe" run stable-x86_64-pc-windows-msvc cargo test -p northhing --lib settings
+$env:TEMP = "<LOCAL_PATH>"; $env:TMP = $env:TEMP
+& "<LOCAL_PATH>" run stable-x86_64-pc-windows-msvc cargo test -p northhing --lib settings
 ```
 
 ```

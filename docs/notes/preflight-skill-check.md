@@ -3,7 +3,7 @@
 > æ¥æ northhing-v3 é¡¹ç®ç?agent **å¿è¯»**ãè¯´ææ¬é¡¹ç®ç¨åªä¸?skill ä½ç³»ãä¸ºä»ä¹ãä»¥åæ¥å¸¸æä¹ç¨ã?
 ## TL;DR
 
-- **å¨å± meta-skill**ï¼`preflight-skill-check`ï¼ä½äº?`C:\Users\UmR\.agents\skills\preflight-skill-check\`ï¼?- **æ¬é¡¹ç®ç¶æ?*ï¼`docs/PROJECT_STATE.md` æ«å°¾ "ð§ Skill ç³»ç»ç°ç¶ (2026-06-18)" æ®µè½
+- **å¨å± meta-skill**ï¼`preflight-skill-check`ï¼ä½äº?`<LOCAL_PATH>`ï¼?- **æ¬é¡¹ç®ç¶æ?*ï¼`docs/PROJECT_STATE.md` æ«å°¾ "ð§ Skill ç³»ç»ç°ç¶ (2026-06-18)" æ®µè½
 - **å®åæ¥æº**ï¼ç¨æ·æ¾å¼è¦æ±éæ?skill-listï¼å¹¶ç¡®ç«"å¤æ­éæ±æ¯å¦å¯ä»¥åè°ç¨ skill æ¥è¿è¡ä»»å?çå¤å®å®å?- **åå»ºæ¥æ**ï¼?026-06-18
 
 ## ä¸ºä»ä¹æè¿ä¸ª skill
@@ -36,7 +36,7 @@
 åè®¾ææ¬¡éè¦?`brainstorming` ä½å®æ²¡æè½½ï¼
 
 ```text
-1. Read: C:\Users\UmR\.zcode\cli\plugins\cache\zcode-plugins-official\superpowers\5.1.0\skills\brainstorming\SKILL.md
+1. Read: <LOCAL_PATH>
 2. å¨ååºéæç¡®å®£å¸ï¼?   "Using brainstorming (manually loaded from <path>) to clarify scope before writing code."
 3. æ?SKILL.md ç?9-step checklist è¡äº
 4. ä¸è¦"å­å°è±?èµ?brainstorming æµç¨ââææ¡£å¯è½å·²æ¼è¿
@@ -52,13 +52,13 @@
 ä¸æ¬¡æ°ä¼è¯å¼å§æ¶ï¼è·è¿?3 æ¡éªè¯?skill è§¦åè¡ä¸ºæ¯å¦åçã?
 ## æ¼è¿è§å
 
-- `preflight-skill-check` æ¬èº«æ¹äº â?æ´æ° `C:\Users\UmR\.agents\skills\preflight-skill-check\CHANGELOG.md`
+- `preflight-skill-check` æ¬èº«æ¹äº â?æ´æ° `<LOCAL_PATH>`
 - é¡¹ç®ä¾?skill çº¦å®æ¹äº â?æ´æ°æ¬æä»?+ `PROJECT_STATE.md` ç?"Skill ç³»ç»ç°ç¶" æ®µè½
 - ä»»ä½åæ´åç»ç¨æ·æ¹åï¼æ brainstorming HARD-GATEï¼?
 ## ç¸å³é¾æ¥
 
-- ä¸?skillï¼`C:\Users\UmR\.agents\skills\preflight-skill-check\SKILL.md`
-- Skill è¯¦è¡¨ï¼`C:\Users\UmR\.agents\skills\preflight-skill-check\references\skill-catalog.md`
+- ä¸?skillï¼`<LOCAL_PATH>`
+- Skill è¯¦è¡¨ï¼`<LOCAL_PATH>`
 - é¡¹ç®ç¶æï¼`docs/PROJECT_STATE.md`ï¼?ð§ Skill ç³»ç»ç°ç¶ (2026-06-18)" æ®µï¼
-- åæ´æ¥å¿ï¼`C:\Users\UmR\.agents\skills\preflight-skill-check\CHANGELOG.md`
-- using-superpowers åçï¼`C:\Users\UmR\.zcode\cli\plugins\cache\zcode-plugins-official\superpowers\5.1.0\skills\using-superpowers\SKILL.md`
+- åæ´æ¥å¿ï¼`<LOCAL_PATH>`
+- using-superpowers åçï¼`<LOCAL_PATH>`

@@ -1,6 +1,6 @@
 # agy fork 429 路径只读审查
 
-仓库：`C:\Users\UmR\Desktop\opencode-antigravity-auth-fork`（TypeScript / `src/` 行号）
+仓库：`<LOCAL_PATH>`（TypeScript / `src/` 行号）
 时间：2026-09-04（今晚两次 antigravity-gemini-3.8/3.7-flash 零 chunk 挂起事件的事后分析）
 范围：只读，不改任何代码。分析 `src/plugin.ts`、`src/plugin/request.ts`、`src/plugin/request-helpers.ts`、`src/plugin/accounts.ts`。
 

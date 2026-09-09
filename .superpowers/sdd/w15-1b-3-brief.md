@@ -18,7 +18,7 @@
 
 C1 只许动这两个文件（markdown_render.rs 改删尾部 + markdown_render/tests.rs 新建）。
 C2 git add 只点名这两个文件。C3 以磁盘实际为准。
-C4 shell 纪律：cargo 全前缀 `C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo ...`（正斜杠路径）；输出 `cmd /c "... > log 2>&1"` 重定向；禁 PowerShell 管道；禁止启动任何 GUI 应用；单条命令超 10 分钟无输出 = 杀掉报 BLOCKED。
+C4 shell 纪律：cargo 全前缀 `<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo ...`（正斜杠路径）；输出 `cmd /c "... > log 2>&1"` 重定向；禁 PowerShell 管道；禁止启动任何 GUI 应用；单条命令超 10 分钟无输出 = 杀掉报 BLOCKED。
 
 ## 验证（report 必须含命令+输出摘录）
 

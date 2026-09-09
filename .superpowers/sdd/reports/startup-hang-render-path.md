@@ -389,11 +389,11 @@ State observed on this machine now:
 | `~/.northhing/projects/<slug>/` | **3999 stale workspace dirs** (all `c--users-umr-appdata-local-temp-northhing-session-restore-test-*` from prior test runs). | **NOT loaded** — `load_workspace_history_only` only reads `workspace_data.json`, not this dir |
 | `~/.northhing/personal_assistant/workspace/` | Empty | Low |
 | `~/.northhing/relay/api_key` | 44 bytes | Low |
-| `C:\Users\UmR\AppData\Roaming\northhing\config\app.json` | **3653 lines** (Dioxus UI settings, not loaded by `load_app_settings`) | Low for the room first-render path |
-| `C:\Users\UmR\AppData\Roaming\northhing\data\workspace_data.json` | **3 workspaces** (only the ones loaded into the manager at startup). | `list_sessions_all_workspaces` iterates 3 + default = ~4 disk reads |
-| `C:\Users\UmR\AppData\Roaming\northhing\data/backups/` | (subdir) | Could be very large; only touched on `save_json` |
-| `C:\Users\UmR\AppData\Roaming\northhing\episodes/` | 3 small dirs | Not loaded at startup |
-| `C:\Users\UmR\AppData\Roaming\northhing\episodes-quarantine-20260903/` | **164 dirs** (from user cleanup) | Not loaded at startup |
+| `<LOCAL_PATH>` | **3653 lines** (Dioxus UI settings, not loaded by `load_app_settings`) | Low for the room first-render path |
+| `<LOCAL_PATH>` | **3 workspaces** (only the ones loaded into the manager at startup). | `list_sessions_all_workspaces` iterates 3 + default = ~4 disk reads |
+| `<LOCAL_PATH>` | (subdir) | Could be very large; only touched on `save_json` |
+| `<LOCAL_PATH>` | 3 small dirs | Not loaded at startup |
+| `<LOCAL_PATH>` | **164 dirs** (from user cleanup) | Not loaded at startup |
 | WebView2 user data (`%LOCALAPPDATA%\northhing-dioxus-dev\webview_data`) | (user reset) | Could be in an inconsistent state — wry might spin trying to migrate/clean it |
 
 **Key state-dependent variables the first-render path reads:**

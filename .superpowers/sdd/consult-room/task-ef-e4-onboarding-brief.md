@@ -83,7 +83,7 @@ handoff-20260824 §3 对真值的转述有 5 处与 HTML 实际内容不符，�
 
 ## 8. 验证（门禁，全绿才算完）
 
-1. `C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo check -p northhing`（exit 0）
+1. `<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo check -p northhing`（exit 0）
 2. 同上 `cargo test -p northhing ui_dioxus`（基线 7 passed → 本刀后 **8 passed**）与 `cargo test -p northhing flags`（3 passed 不变）
 3. `pnpm run i18n:audit`（exit 0，1 条 grandfathered warning 可保留）
 4. 临时 `flags.rs:41 DIOXUS_SHELL=true`，`cargo build -p northhing`

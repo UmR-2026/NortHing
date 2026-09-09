@@ -20,7 +20,7 @@
 
 ## 验证
 
-1. `C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo check -p northhing`（exit 0；PATH 裸 cargo 是 GNU 工具链，禁用）
+1. `<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo check -p northhing`（exit 0；PATH 裸 cargo 是 GNU 工具链，禁用）
 2. 确认 `pages_onboarding_css.rs` 行数仍 <800
 3. 不需要 CDP/截图（编排者 rebuild 后交用户目验）
 

@@ -82,7 +82,7 @@ rg -n "(CWD_LOCK|ENV_LOCK|REMOTE_SEARCH_TEST_LOCK|TEST_GLOBAL_CONFIG_MUTEX)" src
 ### 4.1 全工作区 Check
 - **命令**：
   ```cmd
-  cd /d E:\agent-project\NortHing && C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo check --workspace
+  cd /d E:\agent-project\NortHing && <LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo check --workspace
   ```
 - **结果**：
   ```text
@@ -93,7 +93,7 @@ rg -n "(CWD_LOCK|ENV_LOCK|REMOTE_SEARCH_TEST_LOCK|TEST_GLOBAL_CONFIG_MUTEX)" src
 ### 4.2 单元测试验证
 - **`northhing-core` 独立集成测试 `path_manager_uninit`**：
   ```cmd
-  cd /d E:\agent-project\NortHing && C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full --test path_manager_uninit
+  cd /d E:\agent-project\NortHing && <LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full --test path_manager_uninit
   ```
   ```text
   running 1 test
@@ -102,7 +102,7 @@ rg -n "(CWD_LOCK|ENV_LOCK|REMOTE_SEARCH_TEST_LOCK|TEST_GLOBAL_CONFIG_MUTEX)" src
   ```
 - **`northhing-core` 单元测试 `path_manager`**：
   ```cmd
-  cd /d E:\agent-project\NortHing && C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full --lib path_manager
+  cd /d E:\agent-project\NortHing && <LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full --lib path_manager
   ```
   ```text
   running 9 tests
@@ -119,7 +119,7 @@ rg -n "(CWD_LOCK|ENV_LOCK|REMOTE_SEARCH_TEST_LOCK|TEST_GLOBAL_CONFIG_MUTEX)" src
   ```
 - **`northing-installer` 单元测试**：
   ```cmd
-  cd /d E:\agent-project\NortHing\northing-installer\src-tauri && C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo test
+  cd /d E:\agent-project\NortHing\northing-installer\src-tauri && <LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test
   ```
   ```text
   running 13 tests

@@ -72,7 +72,7 @@
 1. `pnpm run i18n:audit` → **exit 0**（若有不可消余项，报告逐条列「为何不可消」并由编排者决定降级）。
 2. `node scripts/generate-i18n-contract.mjs` 重跑幂等（二次运行零 diff）。
 3. `rustup run stable-msvc cargo check -p northhing` exit 0（warnings 基线 lib 19 / bin 40 不增）。
-   注：`rustup` 全路径 `C:\Users\UmR\.cargo\bin\rustup.exe`（PATH 无 .cargo\bin）。
+   注：`rustup` 全路径 `<LOCAL_PATH>`（PATH 无 .cargo\bin）。
 4. `rustup run stable-msvc cargo test -p northhing ui_dioxus` 全过（ftl 是 dioxus i18n 加载输入）。
 5. 字节证据：zh ftl 0 PUA / 0 替换符 / 无 BOM / LF；报告附 `git diff --stat` 与分类前后对照表。
 

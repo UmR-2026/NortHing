@@ -21,7 +21,7 @@
 
 ### 2.1 Cargo Check
 ```powershell
-& "C:\Users\UmR\.cargo\bin\rustup.exe" run stable-x86_64-pc-windows-msvc cargo check -p northhing
+& "<LOCAL_PATH>" run stable-x86_64-pc-windows-msvc cargo check -p northhing
 ```
 - **退出码**: 0
 - **输出摘要**:
@@ -35,7 +35,7 @@
 
 ### 2.2 Cargo Test (ui_dioxus)
 ```powershell
-& "C:\Users\UmR\.cargo\bin\rustup.exe" run stable-x86_64-pc-windows-msvc cargo test -p northhing ui_dioxus
+& "<LOCAL_PATH>" run stable-x86_64-pc-windows-msvc cargo test -p northhing ui_dioxus
 ```
 - **退出码**: 0
 - **测试结果**:
@@ -55,7 +55,7 @@
 
 ### 2.3 Cargo Test (skills)
 ```powershell
-& "C:\Users\UmR\.cargo\bin\rustup.exe" run stable-x86_64-pc-windows-msvc cargo test -p northhing skills
+& "<LOCAL_PATH>" run stable-x86_64-pc-windows-msvc cargo test -p northhing skills
 ```
 - **退出码**: 0
 - **测试结果**:
@@ -75,7 +75,7 @@
 
 ### 2.4 Cargo Test (flags)
 ```powershell
-& "C:\Users\UmR\.cargo\bin\rustup.exe" run stable-x86_64-pc-windows-msvc cargo test -p northhing flags
+& "<LOCAL_PATH>" run stable-x86_64-pc-windows-msvc cargo test -p northhing flags
 ```
 - **退出码**: 0
 - **测试结果**:

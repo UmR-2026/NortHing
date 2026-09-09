@@ -45,13 +45,13 @@ src/crates/services/services-integrations/Cargo.toml:50: services-integrations o
 
 - 禁止改 `scripts/core-boundaries/` 下任何文件（改规则=治理变更，需仲裁，不在本任务授权内）。
 - 禁止"顺手"改 async-trait 行或任何其它依赖行。
-- 仓库货：cargo 一律 `C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo ...`；长命令用 run_detached 或 cmd 重定向，不要让 shell 假死。
+- 仓库货：cargo 一律 `<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo ...`；长命令用 run_detached 或 cmd 重定向，不要让 shell 假死。
 
 ## 验证（命令 + 输出原文进 report）
 
 ```powershell
 node scripts/check-core-boundaries.mjs
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-services-integrations
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing-services-integrations
 ```
 
 ## 报告

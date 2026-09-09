@@ -10,7 +10,7 @@
 
 | # | 验收标准 | 判决 | 证据 |
 |---|---|---|---|
-| 1 | 修复后 `cargo test -p northhing-core w9_6`（实现者补 `--features product-full`）本地绿 | PASS | 我独立跑 `C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-core w9_6 --features product-full`，12/12 全绿；含目标用例 `list_tree_skips_symlink_to_outside_target ... ok`。输出与 report §"验证命令 + 输出原文" 命令 1 完全一致 |
+| 1 | 修复后 `cargo test -p northhing-core w9_6`（实现者补 `--features product-full`）本地绿 | PASS | 我独立跑 `<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing-core w9_6 --features product-full`，12/12 全绿；含目标用例 `list_tree_skips_symlink_to_outside_target ... ok`。输出与 report §"验证命令 + 输出原文" 命令 1 完全一致 |
 | 2 | CI 转绿（由编排者推分支后观测） | 不在审查范围 | brief 明确"不在审查范围"。报告无伪证风险 |
 | 3 | diff 只触及允许文件集（platform.rs + report） | PASS | `git diff 6cbebbb..ea2882c --name-only` 仅两行：`platform.rs` + `W15-1g-report.md`；working tree 另有 5 个 WIP 文件未提交、未 staged（review package 已声明忽略） |
 | 4 | `metadata failed` 错误语义保留；`is_within`/`resolve_within_workspace`/`pick_workspace_root` 零改动；测试文件零改动 | PASS | diff hunk 仅 `@@ -316,15 +316,10 @@` 与 `@@ -335,6 +330,14 @@` 两个区块，均落在 `list_workspace_tree` 循环体内。`is_within`(138-147)、`resolve_within_workspace`(66-133)、`pick_workspace_root`(1-54) 函数体未在 diff 中出现。`tests.rs` diff 为空（0 行） |

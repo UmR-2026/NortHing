@@ -69,8 +69,8 @@ god_file:src/crates/assembly/core/src/service/agent_memory/memory_db.rs: current
 
 ```
 pnpm run check:rot
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo check --workspace
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full memory_db
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo check --workspace
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full memory_db
 ```
 
 （编排者已在 BASE `4f2a564` 预跑：check:rot 红（两条违规原文在 §1）、cargo check 绿、memory_db 测试绿——基线已立。）

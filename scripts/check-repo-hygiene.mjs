@@ -90,6 +90,8 @@ const ignoredContentPaths = [
   /(^|\/)Cargo\.lock$/,
 ];
 
+// Local-path exemptions (user decision 2026-09-08: archive = frozen history).
+const localPathExemptPaths = [/^docs\/archive\//];
 const testFilePattern = /(^|\/)(tests?|__tests__)\/|[._-](test|spec)\.[cm]?[jt]sx?$|_tests?\.rs$|\/tests\.rs$/;
 const temporaryPromptNames = new Set([
   '_codex_review_prompt.txt',
@@ -236,8 +238,9 @@ for (const file of repositoryFiles) {
   }
 
   const isTestFile = testFilePattern.test(normalized);
+  const isLocalPathExempt = localPathExemptPaths.some((pattern) => pattern.test(normalized));
   const ext = path.extname(normalized).toLowerCase();
-  const scanLocalPaths = !isTestFile;
+  const scanLocalPaths = !isTestFile && !isLocalPathExempt;
   const scanTokenLikeSecrets = !isTestFile;
   const lines = content.split(/\r?\n/);
   const rustInlineTestSkipLines = ext === '.rs' ? getRustInlineTestSkipLines(lines) : null;

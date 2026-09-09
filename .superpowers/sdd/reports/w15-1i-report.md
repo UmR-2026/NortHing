@@ -166,7 +166,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; fini
 
 ## 运行验证数值与截图证据
 
-- **构建命令**：`C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo build -p northhing`
+- **构建命令**：`<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo build -p northhing`
 - **运行命令**：`Start-Process -FilePath "E:\agent-project\NortHing\target\debug\northhing.exe"`（PID 44968）
 - **采样数据**：
   - `t = 0s`: `Responding = True`, `TotalProcessorTime = 00:00:00.4062500`, `WorkingSet64 = 61284352`

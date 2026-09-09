@@ -23,18 +23,18 @@ Date:   Tue Sep 1 21:46:03 2026 +0800
 
 ## 2. 真实库 mtime/size 前后对比（核心验收证据）
 
-- **解析到的真实数据库绝对路径**：`C:\Users\UmR\AppData\Roaming\northhing\memory\memory.db`
+- **解析到的真实数据库绝对路径**：`<LOCAL_PATH>`
 
 ### 测试前
 ```powershell
-FullName      : C:\Users\UmR\AppData\Roaming\northhing\memory\memory.db
+FullName      : <LOCAL_PATH>
 LastWriteTime : 2026/8/29 17:55:58
 Length        : 94208
 ```
 
 ### 测试后（跑完所有 `agent_memory` 与 `memory` 测试及全仓检查后）
 ```powershell
-FullName      : C:\Users\UmR\AppData\Roaming\northhing\memory\memory.db
+FullName      : <LOCAL_PATH>
 LastWriteTime : 2026/8/29 17:55:58
 Length        : 94208
 ```

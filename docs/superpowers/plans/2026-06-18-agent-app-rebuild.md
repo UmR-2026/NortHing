@@ -21,7 +21,7 @@
 **Already-shipped (commit `7a25b74` + `8bf283c` + `7afcdcb`):** Code-review P1-1, P2-2, P2-4, P2-5 fixes; PROJECT_STATE skill section; 5 superpowers workflow skills bundled in project `.agents/skills/`.
 
 **Working directory:** `E:\agent-project\agent-app-v3` (git worktree on `v3-restructure` branch, **will be renamed to `agent-app` in Phase A0**)
-**Toolchain:** `set PATH=C:\Users\UmR\.cargo\bin;C:\Users\UmR\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin;%PATH%` *before every cargo command* — GNU toolchain ahead of MSVC in PATH breaks `getrandom`/`aws-lc-rs` with `dlltool.exe not found`.
+**Toolchain:** `set PATH=<LOCAL_PATH>` *before every cargo command* — GNU toolchain ahead of MSVC in PATH breaks `getrandom`/`aws-lc-rs` with `dlltool.exe not found`.
 
 ---
 
@@ -397,7 +397,7 @@ Run these after every phase commit:
 
 ```powershell
 # 1. Build clean
-$env:PATH = "C:\Users\UmR\.cargo\bin;C:\Users\UmR\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin;$env:PATH"
+$env:PATH = "<LOCAL_PATH>"
 Set-Location 'E:\agent-project\agent-app'
 cargo build --workspace --all-features
 cargo test --workspace --all-features

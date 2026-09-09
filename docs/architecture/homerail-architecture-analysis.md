@@ -5,7 +5,7 @@
 > **Core design bet**: Human attention is the scarcest resource; systems should occupy as little as possible.
 > **Investigation date**: 2026-07-11
 > **Author**: UmR (user); cross-reference analysis by Mavis 2026-07-11
-> **Local clone**: `C:\Users\UmR\WorkBuddy\Claw\tmp\homerail` (depth 1)
+> **Local clone**: `<LOCAL_PATH>` (depth 1)
 
 ## Why this analysis exists
 
@@ -206,4 +206,4 @@ These 3 workstreams are scheduled as **P2 backlog** in HANDOFF §7.5 B-2/B-3/B-4
 
 ---
 
-*Analysis authored by Mavis on 2026-07-11. Cross-references: HANDOFF §0, HANDOFF §7.5, K.2.x route. Northing sub-agent architecture facts: `LongRunningSkill` + `A1StubSkill` + 5-helper `execute_hidden_subagent_internal` split. Local homerail clone: `C:\Users\UmR\WorkBuddy\Claw\tmp\homerail` (depth 1).*
+*Analysis authored by Mavis on 2026-07-11. Cross-references: HANDOFF §0, HANDOFF §7.5, K.2.x route. Northing sub-agent architecture facts: `LongRunningSkill` + `A1StubSkill` + 5-helper `execute_hidden_subagent_internal` split. Local homerail clone: `<LOCAL_PATH>` (depth 1).*

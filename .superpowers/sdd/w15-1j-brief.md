@@ -59,8 +59,8 @@ codegraph blast radius（编排者代查）：三个改造点全是 room 窗口�
 仓库根 `E:\agent-project\NortHing`：
 
 ```
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo check -p northhing
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo build -p northhing
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo check -p northhing
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo build -p northhing
 ```
 
 （编排者已在 BASE `80aef83` 预跑第一条，基线绿。）

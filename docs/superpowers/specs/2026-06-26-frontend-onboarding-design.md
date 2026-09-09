@@ -695,14 +695,14 @@ impl AppSettings {
  ],
  "workspaces": [
  {
- "path": "/home/user/projects/northing",
+ "path": "<LOCAL_PATH>",
  "display_name": "northing",
  "added_at": 1782400000,
  "last_opened_at": 1782400000,
- "identity_md_path": "/home/user/projects/northing/IDENTITY.md"
+ "identity_md_path": "<LOCAL_PATH>"
  }
  ],
- "current_workspace": "/home/user/projects/northing",
+ "current_workspace": "<LOCAL_PATH>",
  "skills_enabled": [
  {"name": "memory", "global_enabled": true, "workspace_overrides": {}},
  {"name": "pdf", "global_enabled": true, "workspace_overrides": {}}

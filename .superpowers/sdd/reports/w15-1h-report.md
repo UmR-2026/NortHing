@@ -43,7 +43,7 @@
 
 ### 命令 1：针对性单测
 ```bash
-cmd /c "C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full memory_db"
+cmd /c "<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full memory_db"
 ```
 **输出原文**：
 ```text
@@ -138,7 +138,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; fini
 
 ### 命令 2：工作区编译检查
 ```bash
-cmd /c "C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo check --workspace"
+cmd /c "<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo check --workspace"
 ```
 **输出原文**：
 ```text
@@ -199,7 +199,7 @@ warning: `northhing` (bin "northhing") generated 61 warnings (2 duplicates) (run
 
 #### (1) 单测套件全绿
 ```bash
-cmd /c "C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full memory_db"
+cmd /c "<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full memory_db"
 ```
 ```text
 running 24 tests
@@ -275,7 +275,7 @@ Total Rounds: 20, Passed: 20, Failed: 0
 
 #### (3) 工作区类型检查全绿
 ```bash
-cmd /c "C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo check --workspace"
+cmd /c "<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo check --workspace"
 ```
 ```text
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.25s

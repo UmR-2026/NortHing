@@ -4,7 +4,7 @@
 
 工作地点（相对路径根、命令 workdir）：`E:\agent-project\northing\.worktrees\consult-room-build`（git merge 进行中，MERGE_HEAD=main，勿 abort 勿 commit）
 
-cargo 一律走前缀：`C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc`
+cargo 一律走前缀：`<LOCAL_PATH> run stable-x86_64-pc-windows-msvc`
 
 ## 已核验事实（解法依据，勿再质疑）
 

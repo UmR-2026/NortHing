@@ -26,7 +26,7 @@ Rot budget verification passed (5 grep rules [unwrap_production=483/502, expect_
 
 命令：
 ```
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo check -p northhing
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo check -p northhing
 ```
 
 输出：
@@ -39,7 +39,7 @@ warning: `northhing` (bin "northhing") generated 61 warnings (2 duplicates)
 
 命令：
 ```
-C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing --lib markdown_render
+<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo test -p northhing --lib markdown_render
 ```
 
 输出：

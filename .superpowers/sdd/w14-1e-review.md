@@ -16,7 +16,7 @@
 | 3. 不许动生产路径（`:246`、`:302`、`dream.rs:38`、`turn_persist.rs:457`） | **PASS** | `git diff --name-only` 仅 1 文件；`:246/302` 在 commit 前/后字节不变（仅 `:529–608` 区域被修改，落在 `query_aware_tests` 子模块内）。 |
 | 4. 不许改 `default_memory_db_path` / `with_test_memory_db_path` / `unique_test_memory_db_path` 实现 | **PASS** | `memory_db.rs` 不在 `git diff --name-only` 清单。 |
 | 5. 新发现未受保护测试点一并补 | **PASS** | 新发现 `:565`（非空查询 → 触发 `MemoryDb::open` → 原属缺陷）与 `:552`（空查询）两处；report 已点名补法，符合 brief "一并补上并在 report 点名" 要求。 |
-| 验证 — 真实库 mtime/size 前后一致 | **PASS** | 独立 `Get-Item`：测试后 `FullName=C:\Users\UmR\AppData\Roaming\northhing\memory\memory.db`、`LastWriteTime=2026/8/29 17:55:58`、`Length=94208`，与 report 一致。 |
+| 验证 — 真实库 mtime/size 前后一致 | **PASS** | 独立 `Get-Item`：测试后 `FullName=<LOCAL_PATH>`、`LastWriteTime=2026/8/29 17:55:58`、`Length=94208`，与 report 一致。 |
 | 验证 — `cargo test ... agent_memory` / `memory` | **PASS** | report 粘贴 69/76 passed；与 guard 修复后预期一致。 |
 | 验证 — `node scripts/verify-rot-budget.mjs` | **PASS** | report 粘贴通过（5 grep + 3 dir + 6 god-file）。 |
 

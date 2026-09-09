@@ -114,5 +114,5 @@ py build.py && py embed.py
 
 ## 关联外部文件
 
-- Kimi K3 全量 review: `C:\Users\UmR\WorkBuddy\2026-07-17-02-25-47\northing-deep-review.md`
+- Kimi K3 全量 review: `<LOCAL_PATH>`
 - QClaw code review: `.handoffs/review-commit-997e14e_20260717.md`

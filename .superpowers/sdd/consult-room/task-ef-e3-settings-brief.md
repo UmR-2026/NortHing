@@ -65,7 +65,7 @@ class: "sys-config w2-foot"
 
 ## 5. 验证
 
-1. `C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo check -p northhing`
+1. `<LOCAL_PATH> run stable-x86_64-pc-windows-msvc cargo check -p northhing`
 2. 同上 `cargo test -p northhing ui_dioxus` 与 `cargo test -p northhing flags`
 3. `pnpm run i18n:audit`（exit 0，grandfathered warning 可保留）
 4. 临时 DIOXUS_SHELL=true，`cargo build -p northhing`

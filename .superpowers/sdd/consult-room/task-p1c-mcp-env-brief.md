@@ -42,7 +42,7 @@ pub fn load_env(keyring: &dyn KeyringBackend, server_id: &str) -> Result<HashMap
 ## 验证（必跑并贴输出）
 
 ```powershell
-$env:TEMP = "C:\Users\UmR\AppData\Local\Temp"; $env:TMP = $env:TEMP
+$env:TEMP = "<LOCAL_PATH>"; $env:TMP = $env:TEMP
 cd E:\agent-project\northing
 cargo test -p northhing --lib settings
 cargo test -p northhing --lib keyring

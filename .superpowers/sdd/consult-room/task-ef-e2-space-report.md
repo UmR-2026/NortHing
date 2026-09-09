@@ -20,7 +20,7 @@
 $ cargo check -p northhing
 Finished `dev` profile [unoptimized + debuginfo] (exit 0)
 
-$ & "C:\Users\UmR\.cargo\bin\rustup.exe" run stable-msvc cargo test -p northhing ui_dioxus
+$ & "<LOCAL_PATH>" run stable-msvc cargo test -p northhing ui_dioxus
 running 6 tests
 test ui_dioxus::css::tests::assert_truth_css_byte_count ... ok
 test ui_dioxus::registry::tests::test_notify_closed_with_gen_matching_vs_stale ... ok
@@ -30,7 +30,7 @@ test ui_dioxus::registry::tests::test_register_window_with_hwnd_and_mark_closing
 test ui_dioxus::registry::tests::test_shell_window_manager_clone_state_sharing ... ok
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; finished in 0.00s
 
-$ & "C:\Users\UmR\.cargo\bin\rustup.exe" run stable-msvc cargo test -p northhing flags
+$ & "<LOCAL_PATH>" run stable-msvc cargo test -p northhing flags
 running 3 tests
 test flags::tests::default_mode_id_is_agentic ... ok
 test flags::tests::dioxus_shell_default_false ... ok

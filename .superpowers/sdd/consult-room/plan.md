@@ -47,7 +47,7 @@
    ```
    UI 改动必须附改动前后截图（暗+亮双光学）：`desktop:dev` 等价
    `rustup run stable-x86_64-pc-windows-msvc cargo run -p northhing`（同环境变量），
-   截图用 `powershell -NoProfile -File 'C:\Users\UmR\.local\share\opencode\worktree\16ba4143154c219fe7f43650ae6f4d297aa32c23\visual-iter\.opencode\tools\shot-window.ps1' -OutFile <path>`（独立进程，防 Add-Type 冲突），
+   截图用 `powershell -NoProfile -File '<LOCAL_PATH>' -OutFile <path>`（独立进程，防 Add-Type 冲突），
    点击导航用同目录 `click-window.ps1`；全屏应用遮挡时先最小化遮挡窗口。截图落 `docs/design/2026-07-22-frontend-redesign/consult-room/build-shots/`，
    **不 commit**（编排者终审统一处置），report 给绝对路径。
 6. **探针纪律**：spike 探针（poc_consult_probe.slint / build.rs 探针段）留在 spike 分支存档，

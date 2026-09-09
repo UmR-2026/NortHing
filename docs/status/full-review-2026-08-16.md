@@ -40,7 +40,7 @@
 
 | ID | 问题 | 位置 |
 |---|---|---|
-| M-1 | 远程 `ReadFile`/`SetWorkspace` 接受任意绝对路径，无遏制（`/etc/passwd`、`C:\Users\...\id_rsa` 可读，上限 30MB） | `remote_workspace_resolver.rs:40-46`、`remote_file_io.rs:25-62` |
+| M-1 | 远程 `ReadFile`/`SetWorkspace` 接受任意绝对路径，无遏制（`/etc/passwd`、`<LOCAL_PATH>` 可读，上限 30MB） | `remote_workspace_resolver.rs:40-46`、`remote_file_io.rs:25-62` |
 | M-2 | 加密命令通道无重放保护（无序列号/nonce 去重，截获密文永久可重放） | `remote_connect/remote_server.rs:235-241` |
 | M-3 | 安装器三连：manifest 路径 zip-slip（`file.path` 直接 join，无 `..`/绝对路径检查）；webview 字符串经 `cmd /C` 执行；请求路径直接 `remove_dir_all` 无服务端再校验 | `northing-installer/src-tauri/src/installer/extract.rs:86-94`、`registry.rs:102-133`、`commands.rs:193-204,430-446` |
 | M-4 | Telegram bot 配对码 6 位数字、300s 窗口无失败次数限制（~55 req/s 可爆破） | `pairing.rs:208-211`、`bot/telegram.rs:309-318` |

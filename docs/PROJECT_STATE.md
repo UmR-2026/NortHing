@@ -96,9 +96,9 @@
 ## 🖥— 用户电脑环境（已验证— | 工具 | 版本 | 路径 |
 |------|------|------|
 | **Rust GNU** | 1.95.0 | `C:\Program Files\Rust stable GNU 1.95\bin\` |
-| **Rust MSVC** (rustup) | 1.96.0 | `C:\Users\UmR\.cargo\bin\` (default toolchain) |
+| **Rust MSVC** (rustup) | 1.96.0 | `<LOCAL_PATH>` (default toolchain) |
 | **MSVC Build Tools** | 2022 (14.44.35207) | `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\` |
-| **Node.js** | 24.16.0 | `C:\Users\UmR\nodejs\node-v24.16.0-win-x64\` |
+| **Node.js** | 24.16.0 | `<LOCAL_PATH>` |
 | **pnpm** | 10.33.2 | 同上 |
 | **MSYS2 (MinGW)** | 已安— | `C:\msys64\mingw64\bin\` (dlltool.exe) |
 
@@ -109,7 +109,7 @@
 $env:PATH = "C:\msys64\mingw64\bin;$env:PATH"
 cargo build -p northhing-cli
 
-# GUI 编译（MSVC toolchain，必须用 --target — rustup shim— cmd /c "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64 >nul && set PATH=C:\Users\UmR\.cargo\bin;%PATH% && cargo build -p northhing-desktop --target x86_64-pc-windows-msvc
+# GUI 编译（MSVC toolchain，必须用 --target — rustup shim— cmd /c "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64 >nul && set PATH=<LOCAL_PATH> && cargo build -p northhing-desktop --target x86_64-pc-windows-msvc
 
 # GUI 输出位置（注意：不是 target\debug\，而是 target\x86_64-pc-windows-msvc\debug\— # target\x86_64-pc-windows-msvc\debug\northhing-desktop.exe
 
@@ -353,7 +353,7 @@ E:\agent-project\northhing\
 
 **最大优化点**: Skill + Agent listing (v3 改为数据库检— ## 🔧 Skill 系统现状 (2026-06-18)
 
-### 触发守则（meta-rule— 所有用户请求处理前必须先运— `preflight-skill-check`（位— `C:\Users\UmR\.agents\skills\preflight-skill-check\`）— skill 强制执行 using-superpowers — "1% 规则"：哪怕只— 1% 概率— skill 适用，也必须先调用— ### 当前 skill 库存
+### 触发守则（meta-rule— 所有用户请求处理前必须先运— `preflight-skill-check`（位— `<LOCAL_PATH>`）— skill 强制执行 using-superpowers — "1% 规则"：哪怕只— 1% 概率— skill 适用，也必须先调用— ### 当前 skill 库存
 
 按发现优先级（高 — 低）— 1. **项目— `.agents/skills/`（本项目专用— 3 个，commit `469bb06` + `e0bc13b` 累积— *
  - northhing-v3-workflow（项目专属）, brainstorming, writing-plans, executing-plans, dispatching-parallel-agents, subagent-driven-development, using-git-worktrees, test-driven-development, verification-before-completion, using-superpowers, writing-skills, systematic-debugging, code-review, requesting-code-review, receiving-code-review, finishing-a-development-branch, documentation-and-adrs, codebase-design— 8 个）
@@ -362,9 +362,9 @@ E:\agent-project\northhing\
  - android-emulator/0.1.0: android-dev
  - ios-simulator/0.1.0: ios-dev
  - restore-legacy-sessions/0.1.0: restore-legacy-sessions
-4. **用户全局** (`C:\Users\UmR\.agents\skills\`, 2 — preflight-skill-check（本会话创建— using-coze-cli（已有）
+4. **用户全局** (`<LOCAL_PATH>`, 2 — preflight-skill-check（本会话创建— using-coze-cli（已有）
 
-完整目录 + 每条触发场景 + 优先— + — 突表：— `C:\Users\UmR\.agents\skills\preflight-skill-check\references\skill-catalog.md`— ### 未挂— skill 的处理（重要！）
+完整目录 + 每条触发场景 + 优先— + — 突表：— `<LOCAL_PATH>`— ### 未挂— skill 的处理（重要！）
 新会话的 system-reminder 只显示挂载的 4 — skill— *未挂载的 skill 仍然适用**，但不能通过 `Skill` 工具调用— 必须：
 1. — Read 工具读它— SKILL.md
 2. 明确向用户宣布："Skill `<name>` 未挂载，手动读取 `<path>` 并遵循其内容"

@@ -12,7 +12,7 @@
 
 fixer 声称 `ssh-key 0.7.0-rc.11` 源码 `src/algorithm.rs:416-425` 证实 `HashAlg::default() == Sha256`。我直接从本机 cargo registry 调出 `ssh-key-0.7.0-rc.11` 源码独立核对：
 
-**`C:\Users\UmR\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ssh-key-0.7.0-rc.11\src\algorithm.rs:415-425`**：
+**`<LOCAL_PATH>`**：
 
 ```rust
 /// Hashing algorithms a.k.a. digest functions.

@@ -77,7 +77,7 @@
 
 ## 4. 验证
 
-1. `rustup` 用 `C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc`
+1. `rustup` 用 `<LOCAL_PATH> run stable-x86_64-pc-windows-msvc`
 2. 临时 `DIOXUS_SHELL=true`，`cargo build -p northhing`（warnings 只降不升；现基线 bin ~33–34）
 3. CDP 取证（纪律：禁光标劫持。Hidden 启动 + `--remote-debugging-port=9333`）：
    - 脚本可改 `C:\WINDOWS\TEMP\opencode\t7-cdp2.ps1`：左宝石只等 **1** 个新 page（满高左列），右宝石 1 个 work。

@@ -24,7 +24,7 @@
 ### Command 1: `cargo check -p northhing`
 
 ```
-$env:TEMP = "C:\Users\UmR\AppData\Local\Temp"; $env:TMP = $env:TEMP
+$env:TEMP = "<LOCAL_PATH>"; $env:TMP = $env:TEMP
 cargo check -p northhing
 ```
 
@@ -49,7 +49,7 @@ warning: `northhing` (bin "northhing") generated 35 warnings (run `cargo fix --b
 ### Command 2: `cargo check -p northhing --tests`
 
 ```
-$env:TEMP = "C:\Users\UmR\AppData\Local\Temp"; $env:TMP = $env:TEMP
+$env:TEMP = "<LOCAL_PATH>"; $env:TMP = $env:TEMP
 cargo check -p northhing --tests
 ```
 

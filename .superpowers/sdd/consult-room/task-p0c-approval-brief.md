@@ -82,7 +82,7 @@ KernelEventDto::ToolCall(tc) if tc.phase == ToolCallPhase::AwaitingConfirmation
 ## 验证（必跑并贴输出）
 
 ```powershell
-$env:TEMP = "C:\Users\UmR\AppData\Local\Temp"; $env:TMP = $env:TEMP
+$env:TEMP = "<LOCAL_PATH>"; $env:TMP = $env:TEMP
 cd E:\agent-project\northing
 cargo check --workspace
 cargo check -p northhing --features ui-dioxus
