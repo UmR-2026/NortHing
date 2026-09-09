@@ -25,13 +25,13 @@ report 写 `.superpowers/sdd/w20-2-report.md`，不进本单验收 diff（不 co
 ## 功能要求
 
 1. **archive 豁免（仅 local-path 扫描）**：`check-repo-hygiene.mjs` 新增 `localPathExemptPaths = [/^docs\/archive\//]`，并入 `scanLocalPaths` 判定（现 line ~238-240：`scanLocalPaths = !isTestFile && !isLocalPathExempt`）。**token/私钥扫描对 archive 保持生效**（豁免只作用于 local-path 一项）。注释写明依据：用户拍板 2026-09-08，归档=冻结历史。
-2. **75 文件全脱敏**：命中行的本地绝对路径替换为占位符。**决策表钉死（53 复审实测：本批 146 个命中 token 零个指向本仓 checkout 根）——一律 `<LOCAL_PATH>`；`<REPO_ROOT>` 在本批 BASE 实测为 0 命中，验收 diff 出现任何 `<REPO_ROOT>` 即可疑打回**（防 `...projects\northing` 类含仓名字样的误判）。只替换命中 token，行内其余内容逐字不动。
-3. **编码安全**：替换必须 ASCII/字节级安全（命中模式全 ASCII；75 文件经 53 实测全部严格 UTF-8，GBK 恐惧不成立但仍禁整文件重编码）；**禁 split(/\r?\n/)+join('\n') 式行重组**（会把 CRLF 归一成 LF），替换作用于完整内容串/Buffer；改后 `git diff --stat` 每文件 +/- 相等、净差必须为 0、全批变更行 ≤146。
+2. **75 文件全脱敏**：命中行的本地绝对路径替换为占位符。**决策表钉死（53 复审实测：本批 146 个命中 token 零个指向本仓 checkout 根）——local-path 型一律 `<LOCAL_PATH>`；token 型命中（仅第 75 文件 1 行）替换为 `<TOKEN>`；`<REPO_ROOT>` 在本批 BASE 实测为 0 命中，验收 diff 出现任何 `<REPO_ROOT>` 即可疑打回**（防 `...projects\northing` 类含仓名字样的误判）。只替换命中 token，行内其余内容逐字不动。
+3. **编码安全**：替换必须 ASCII/字节级安全（命中模式全 ASCII；75 文件经 53 实测全部严格 UTF-8，GBK 恐惧不成立但仍禁整文件重编码）；**禁 split(/\r?\n/)+join('\n') 式行重组**（会把 CRLF 归一成 LF），替换作用于完整内容串/Buffer；改后 `git diff --stat` 每文件 +/- 相等、净差必须为 0、全批变更行 ≤147（146 local-path 行 + 第 75 文件 1 行 token 行）。
 4. ledger P2-24 翻转 resolved（同 commit，注明处置口径与拍板日期）。
 
 ## Constraints
 
-- commit 逐文件点名 `git add`（禁 -A，76 文件逐个或按目录显式列名——`git add docs/notes/ .superpowers/sdd/reports/` 这类目录点名可接受，禁裸 `-A`/`git add .`）；message 前缀 `chore(hygiene):` + `(W20-2)` 后缀，body 引用户拍板「2026-09-08 混合：豁免 archive + 其余全脱敏」。
+- commit 逐文件点名 `git add`（禁 -A，77 文件（75 脱敏 + 脚本 + ledger）逐个或按目录显式列名——`git add docs/notes/ .superpowers/sdd/reports/` 这类目录点名可接受，禁裸 `-A`/`git add .`）；message 前缀 `chore(hygiene):` + `(W20-2)` 后缀，body 引用户拍板「2026-09-08 混合：豁免 archive + 其余全脱敏」。
 - report 贴原文输出 + exit code；绝对路径用 `<REPO_ROOT>` 占位。
 - 脚本改动最小化：豁免逻辑 ≤5 行。
 - 收口前必跑 `node scripts/check-repo-hygiene.mjs`。
@@ -48,11 +48,11 @@ report 写 `.superpowers/sdd/w20-2-report.md`，不进本单验收 diff（不 co
 ## 验证
 
 1. **BASE 红态**（编排者已实测 391=384+7，report 复跑贴原文）：浅克隆 + `node scripts/check-repo-hygiene.mjs` → exit 1。
-2. **修复后浅克隆终态（方案 a 口径）**：浅克隆 TIP 重跑 → **exit 1 且恰好余 6 条 token-like-secret 违规（全部在 docs/archive/），local-path 违规全清零**。**防空洞绿钉死**：report 贴完整首行输出，显式断言含 `WARNING: full-repo scan fallback active` 行 + content files scanned ≥3000；**输出重定向到克隆外**（重定向进克隆会让 localChangedFiles 非空、扫描塌缩为单文件假绿——53 实测踩中）。
-3. **豁免范围探针（断言式双向）**：在修复后浅克隆内 ① 向某 docs/archive/ 文件追加一行 token 形态串 ⇒ 输出新增该文件「contains a token-like secret」精确条目（方案 a 下余留 6 条已天然证明一半，此步补差分）；② 阴性对照：向某 docs/archive/ 文件追加一行 `C:\Users\x\y` 形态路径 ⇒ 断言**无**新增 local-path 违规。然后丢弃克隆。
+2. **修复后浅克隆终态（方案 a 口径）**：浅克隆 TIP 重跑 → **exit 1 且恰好余 6 条 token-like-secret 违规（全部在 docs/archive/），local-path 违规全清零**。**防空洞绿钉死**：report 贴完整首行输出，显式断言含 `WARNING: full-repo scan fallback active` 行 + content files scanned ≥3000（注意：scanned 计数仅 pass 路径打印，终态 exit-1 运行无此行——改以 WARNING 行 + 恰好 6 条违规跨 3 个 archive 文件的完整清单为全量范围证明，并附克隆内 `git ls-files` 计数（BASE 实测 3876 ≥3000）作旁证）；**输出重定向到克隆外**（重定向进克隆会让 localChangedFiles 非空、扫描塌缩为单文件假绿——53 实测踩中）。
+3. **豁免范围探针（断言式双向）**：在修复后浅克隆内 ① 向某 docs/archive/ 文件追加一行 token 形态串 ⇒ 输出新增该文件「contains a token-like secret」精确条目（方案 a 下余留 6 条已天然证明一半，此步补差分）；② 阴性对照：向某 docs/archive/ 文件追加一行 Windows 形态本地绝对路径（盘符字母 + 冒号 + `\Users\x\y` 段拼接而成的串；本 brief 不内嵌该字面量——内嵌会使 brief 自身成为清单外 local-path 命中，53 复审实测）⇒ 断言**无**新增 local-path 违规。然后丢弃克隆。
 4. 主仓 `node scripts/check-repo-hygiene.mjs` —— 绿（日常增量口径不回归；archive 豁免侧只经克隆验证，分工正确）。
-5. `git diff --stat` 复核：75 文件每文件 +/- 相等、净差 0、全批变更行 ≤146。
-6. report 附：分类账（豁免 88 文件 / 脱敏 75 文件 / 永久残留 6 条 archive token）+ 脱敏抽样 diff 段（3 处）+ `<REPO_ROOT>` grep 零命中证明。
+5. `git diff --stat` 复核：75 文件每文件 +/- 相等、净差 0、全批变更行 ≤147（口径同功能 3）。
+6. report 附：分类账（豁免 88 文件 / 脱敏 75 文件 / 永久残留 6 条 archive token）+ 脱敏抽样 diff 段（3 处）+ `<REPO_ROOT>` grep 零命中证明（grep 范围 = 验收 diff / 75 文件内容；不做全仓 grep——report 自身按 Constraints 用 `<REPO_ROOT>` 占位会污染全仓结果）。
 
 ## skill 前置
 
