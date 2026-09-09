@@ -4,7 +4,7 @@
 
 ## 0. 一句话状态
 
-W22-1（P2-3 压缩事件可见化）+ W22-2（P2-4 session 删除挂清理）双单闭环（各 1 轮 DONE + m3 AWC 闭环），**本地 10 commits 待推送**（`fff7535..HEAD`，hygiene 引线 `f77a578` 已拆，闸绿）。编排者自派外部审查（coder-qwf 首场）交付 1C/6I/5M；**用户另委外部审查（架构+实现本体），guide 已写，其结果 + 探索结果下次 session 一并交付 triage**。
+W22-1（P2-3 压缩事件可见化）+ W22-2（P2-4 session 删除挂清理）双单闭环（各 1 轮 DONE + m3 AWC 闭环），**已推送至 `8264716`**（`fff7535..8264716` 11 commits，用户 2026-09-09 授权，CI run 34374829227 七 job 全绿，hygiene 引线 `f77a578` 已拆并被 CI 证实）。编排者自派外部审查（coder-qwf 首场）交付 1C/6I/5M；**用户另委外部审查（架构+实现本体），guide 已写，其结果 + 探索结果下次 session 一并交付 triage**。
 
 ## 1. 下次 session 第一事：收外部包 triage
 
@@ -21,7 +21,7 @@ W23 候选（coder-qwf 报告衍生，详见台账行）：
 
 ## 2. 待用户拍板（本 session 末已交，未答——下次继续等）
 
-1. **推送授权** `fff7535..HEAD`（10 commits：W22-1/2 实施 + 全部 docs + hygiene 修复）
+1. ~~推送授权~~ **已推**（`fff7535..8264716`，用户授权 2026-09-09）
 2. P2-18：(b) 预留 API + 修 stop_server 死分支【编排者推荐】
 3. P2-17：(a) 关条按设计顺延（等第三调用方）【推荐】
 4. P2-14：(a) resolved-by-design 关条（dream-sweep 即答案）【推荐】
@@ -41,9 +41,8 @@ FYI 可推翻项：P2-3 提案(3) 压缩历史落痕已按 YAGNI 主动放弃记
 
 ## 4. 当前盘面
 
-- HEAD = 本地最新（c24027f 台账 + handoff 本文件待 commit）；origin/main = fff7535。
-- 工作树干净、无 stash、无进行中子代理任务。
-- CI：最后绿 run = 2c44981；W22 产品代码（050cb9c/5cb64fc）**从未过 CI**（推送即触发，hygiene 雷已拆）。
+- origin/main = `8264716`（本地同步，工作树干净、无 stash、无进行中子代理任务）。
+- CI：run 34374829227（8264716）七 job 全绿——W22 产品代码（050cb9c/5cb64fc）已过 CI。
 - 余量：task-gate 13 行（834/847）/ checker 50 行（999/1050）/ sdd cap 95/400 / scripts 45/48（2026-10-15 回落 42/48 届时确认）。
 
 ## 5. Suggested skills
