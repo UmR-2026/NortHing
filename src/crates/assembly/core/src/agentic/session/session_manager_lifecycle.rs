@@ -21,6 +21,8 @@ use crate::agentic::session::{
 };
 use crate::agentic::skill_agent_snapshot::TurnSkillAgentSnapshot;
 use crate::infrastructure::ai::get_global_ai_client_factory;
+use crate::infrastructure::storage::{CleanupPolicy, CleanupService};
+use crate::infrastructure::PathManager;
 use crate::service::config::{
     get_app_language_code, get_global_config_service, short_model_user_language_instruction, subscribe_config_updates,
     ConfigUpdateEvent,
@@ -322,6 +324,18 @@ impl SessionManager {
             elapsed_ms_u64(snapshot_stage_started_at)
         );
 
+        let cleanup_stage_started_at = Instant::now();
+        debug!(
+            "Session deletion stage starting: session_id={}, stage=file_cleanup",
+            session_id
+        );
+        run_file_cleanup(&crate::infrastructure::path_manager_arc()).await;
+        debug!(
+            "Session deletion stage completed: session_id={}, stage=file_cleanup, duration_ms={}",
+            session_id,
+            elapsed_ms_u64(cleanup_stage_started_at)
+        );
+
         let context_stage_started_at = Instant::now();
         debug!(
             "Session deletion stage starting: session_id={}, stage=context_store_delete",
@@ -469,5 +483,16 @@ impl SessionManager {
                 .collect();
             Ok(summaries)
         }
+    }
+}
+
+/// Run global file cleanup (temporary files, old logs, oversized cache) via [`CleanupService`].
+///
+/// Executed during session deletion to reclaim disk space. Failures are logged with `warn!`
+/// and do not interrupt the session deletion flow.
+pub(crate) async fn run_file_cleanup(path_manager: &PathManager) {
+    let cleanup_service = CleanupService::new(path_manager.clone(), CleanupPolicy::default());
+    if let Err(e) = cleanup_service.cleanup_all().await {
+        warn!("Failed to cleanup storage files: {}", e);
     }
 }

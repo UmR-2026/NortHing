@@ -14,7 +14,10 @@ use crate::service::remote_ssh::workspace_state::local_workspace_roots_equal;
 use crate::service::session::{DialogTurnData, DialogTurnKind, TurnStatus, UserMessageData};
 use serde_json::json;
 use std::sync::Arc;
+use std::time::{Duration, SystemTime};
 use uuid::Uuid;
+
+use crate::agentic::session::session_manager_lifecycle::run_file_cleanup;
 
 #[tokio::test]
 async fn rollback_context_deletes_persisted_turns_from_target() {
@@ -434,4 +437,37 @@ fn build_messages_from_turns_skips_model_invisible_turns() {
 
     assert_eq!(messages.len(), 1);
     assert!(messages[0].is_actual_user_message());
+}
+
+#[tokio::test]
+async fn run_file_cleanup_deletes_expired_temp_files_in_isolated_user_root() {
+    let workspace = TestWorkspace::new();
+    let pm = workspace.path_manager();
+    let temp_dir = pm.temp_dir();
+    std::fs::create_dir_all(&temp_dir).expect("temp dir should be created");
+
+    let expired_file = temp_dir.join("expired_temp_file.tmp");
+    std::fs::write(&expired_file, b"temporary data").expect("temp file should be written");
+
+    // Forge mtime to 8 days ago (retention policy is 7 days)
+    let eight_days_ago = SystemTime::now() - Duration::from_secs(8 * 24 * 3600);
+    let ft = filetime::FileTime::from_system_time(eight_days_ago);
+    filetime::set_file_mtime(&expired_file, ft).expect("file mtime should be set");
+
+    let fresh_file = temp_dir.join("fresh_temp_file.tmp");
+    std::fs::write(&fresh_file, b"fresh data").expect("fresh temp file should be written");
+
+    assert!(expired_file.exists(), "expired file must exist before cleanup");
+    assert!(fresh_file.exists(), "fresh file must exist before cleanup");
+
+    run_file_cleanup(&pm).await;
+
+    assert!(
+        !expired_file.exists(),
+        "expired temp file must be deleted by run_file_cleanup"
+    );
+    assert!(
+        fresh_file.exists(),
+        "fresh temp file must be preserved by run_file_cleanup"
+    );
 }

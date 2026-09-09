@@ -114,7 +114,7 @@
 - **Symptom**: `CleanupService` fully implemented (`cleanup_all`, `cleanup_temp_files`, `cleanup_old_logs`, `cleanup_oversized_cache`) but never instantiated or called. `spawn_cleanup_task` cleans expired sessions, not files. Fixed partially by consult-room P3b (2026-08-26): CleanupService now spawned at desktop startup (once + daily 24h) in main.rs initialize_core_services.
 - **Evidence**: `src/crates/assembly/core/src/infrastructure/storage/cleanup.rs:54-76` — full implementation. No code creates `CleanupService` instance prior to P3b. `snapshot_system.rs:446` — `cleanup_orphaned_snapshots` exists but unscheduled. `src/apps/desktop/src/main.rs:66-80` — startup spawn location.
 - **Proposed fix**: (2) Trigger cleanup on session deletion. (3) Include orphaned snapshots in CleanupService — orphan snapshot cleanup requires per-workspace service resolution (`FileSnapshotSystem` is attached to `SnapshotService` within each workspace, `service/snapshot/service.rs:36`, no global instance), separate task.
-- **Status**: active (partially fixed by P3b: startup & daily 24h scheduled; session deletion & orphan snapshots remaining)
+- **Status**: resolved (2026-09-09, W22-2: session 删除触发全局 temp/log/cache 清理已通；孤儿快照纳入为独立设计题划出)
 
 ### P2-5: Failed turns leave no persistent trace in history
 
