@@ -107,7 +107,7 @@
 - **Symptom**: `ContextCompressionStarted` / `Completed` events are defined and emitted, but desktop `event_bridge.rs` and CLI `run.rs` do not handle them. Users see no indication when compression occurs.
 - **Evidence**: `compress_run.rs:53-63` emits events. `event_bridge.rs` — no `ContextCompression` match. `run.rs` — no `ContextCompression` handling.
 - **Proposed fix**: (1) Handle compression events in `event_bridge.rs` — show temporary banner. (2) CLI: print `[context compressed: N → M tokens]`. (3) Insert system message in history.
-- **Status**: resolved (2026-09-09, W22-1: live 提示已通 — kernel 桥 Banner + desktop streaming banner + CLI 打印；历史落痕归 P2-5)
+- **Status**: resolved (2026-09-09, W22-1: live 提示已通 — kernel 桥 Banner + desktop streaming banner + CLI 打印；提案 (3) 历史落痕经评估为 YAGNI 主动放弃——压缩是常规背景事件，live banner 已满足可见性，历史标记只增噪声；编排者口径，用户可推翻)
 
 ### P2-4: Snapshot/log cleanup never scheduled
 
