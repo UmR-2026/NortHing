@@ -19,8 +19,9 @@ W22-1（技术债清账；P2-3 窄义版：压缩事件 live 提示。历史落�
 
 ## 允许文件集
 
-- `src/crates/assembly/core/src/kernel_facade/events.rs`（修改：事件映射）
-- desktop Dioxus 侧处理文件（修改，预计 1-2 个：事件消费 + banner 显示，具体文件由 implementer 按 Dioxus 壳现有事件消费模式定，report 里注明选择理由）
+- `src/crates/assembly/core/src/kernel_facade/events.rs`（修改：事件映射 + 单元测试）
+- `src/apps/desktop/src/ui_dioxus/app.rs`（修改：事件环 :212 catch-all 前加 Banner 臂 + 临时 banner signal，参照同文件 degraded 模式 :183/:187）
+- `src/apps/desktop/src/ui_dioxus/turn_banner.rs`（可选修改：仅当抽 helper 时动；allowlist 超列安全——未改项 task-gate 只出 warning）
 - `src/apps/cli/src/modes/chat/run.rs`（修改：一处打印）
 - `src/apps/cli/src/modes/exec.rs`（修改：一处打印）
 - `docs/status/tech-debt-ledger.md`（修改：P2-3 条目 status 翻转——家规 2 同 commit）
@@ -29,11 +30,14 @@ report 写 `.superpowers/sdd/w22-1-report.md`，不进本单验收 diff（不 co
 
 ## 功能要求
 
-1. **kernel 桥映射**：`agentic_event_to_dtos` 为三个压缩事件加映射（Started/Completed/Failed），复用该函数内既有 DTO 形态（先看 `KernelEventDto` 现有变体，有合适变体直接复用；无则加最简变体）。Started → 「压缩中」态；Completed → 带 token 前后计数的完成态；Failed → 带原因的失败态。
-2. **desktop banner**：Dioxus 壳消费新 DTO，显示临时 banner（参照 `ui_dioxus/turn_banner.rs` 既有横幅模式），不阻塞输入、不改动消息列表。
-3. **CLI 打印**：`run.rs` 与 `exec.rs` 的 `_ => {}` 前加压缩事件分支：Started 打 `[context compression started]`；Completed 打 `[context compressed: N → M tokens]`（取事件载荷真实字段名）；Failed 打 `[context compression failed: {reason}]`。**全英文输出**（日志纪律）。
-4. **测试**：`agentic_event_to_dtos` 的压缩事件映射加一个单元测试（三事件 → 预期 DTO）。desktop/CLI 显示侧靠 judge review（家规 4 不触发）。
-5. **ledger 翻转**：P2-3 status → `resolved`（注明窄义口径：live 提示已通，历史落痕归 P2-5；同 commit）。
+1. **kernel 桥映射（变体钉死）**：`agentic_event_to_dtos` 为三个压缩事件加映射，**一律复用既有 `KernelEventDto::Banner { level, message }`**（kernel-api/src/events.rs:95-98，全仓零发射点无消费者冲突）。**禁加新变体**——KernelEventDto 是 FROZEN 契约（Schema §5）且 kernel-api 在本单 allowlist 外。映射钉死：
+   - Started → `Banner { Info, "Context compression started" }`
+   - Completed → `Banner { Info, "Context compressed: {tokens_before} → {tokens_after} tokens" }`（载荷真实字段名 tokens_before/tokens_after）
+   - Failed → `Banner { Error, "Context compression failed: {reason}" }`
+2. **desktop banner**：`app.rs` 事件环加 Banner 臂，显示临时 banner（参照 degraded signal 模式）。**仅在 `streaming == true` 时展示**（Banner 无 session_id，跨会话压缩不弹前台横幅——钉死口径，app.rs 已有 streaming signal）。不阻塞输入、不改动消息列表。
+3. **CLI 打印**：`run.rs` 与 `exec.rs` 的 `_ => {}` 前加压缩事件分支，文案与映射 1 相同。**exec.rs 仅 `print_text`，JSON emit 不做**（窄义钉死）。**全英文输出**（日志纪律）。
+4. **测试**：`agentic_event_to_dtos` 的压缩事件映射加一个单元测试（三事件 → 预期 Banner DTO）。desktop/CLI 显示侧靠 judge review（家规 4 不触发）。
+5. **ledger 翻转**：P2-3 status → `resolved`（注明窄义口径：live 提示已通（kernel 桥 Banner + desktop streaming banner + CLI 打印），历史落痕归 P2-5；同 commit）。
 
 ## Constraints
 
@@ -53,10 +57,10 @@ report 写 `.superpowers/sdd/w22-1-report.md`，不进本单验收 diff（不 co
 ## 验证
 
 1. `cargo check --workspace` → 绿（BASE 处 Rust 树与 CI run 34341758420 全绿时逐字相同，无需重跑 BASE）。
-2. 新增单元测试随 `cargo test -p northhing-core`（或 kernel_facade 所在 crate 的最近 focused test 目标）跑绿；report 贴测试名与结果。
+2. 新增单元测试跑绿：`cargo test -p northhing-core --features product-full <test_name>`——**必须带 `--features product-full`**（kernel_facade 模块在 `#[cfg(feature = "product-full")]` 门后，默认 feature 为空，不带则测试不参与编译、绿是假绿）；report 贴测试名与结果。
 3. `cargo check -p northhing`（desktop 编译闸，家规 6）。
-4. CLI 侧改动以 `cargo check -p <cli crate>` 覆盖。
-5. report 附：三事件映射的行为说明（哪个 DTO 变体 / desktop banner 形态 / CLI 三种输出文案原文）。
+4. CLI 侧改动以 `cargo check -p northhing-cli` 覆盖。
+5. report 附：三事件 Banner 映射文案原文 + desktop streaming 门控说明 + CLI 两种输出形态（run/exec 各打印、exec 无 JSON emit）。
 
 ## skill 前置
 
