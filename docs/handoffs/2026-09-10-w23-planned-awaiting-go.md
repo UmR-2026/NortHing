@@ -8,7 +8,7 @@
 
 ## 1. 下次 session 第一事
 
-用户放行后：W23 四路并行（brief 复审 → 派发）。**注意 reviewer-53 余额不足故障（2026-09-09 末实证 Payment Required）——brief 复审位临时用 `gemini-38-flash`，53 恢复后回主位。**
+用户放行后：W23 四路并行（brief 复审 → 派发）。brief 复审位主位仍是 `reviewer-53`（用户下个 session 更新 apikey）；仅当仍故障时回落 `gemini-38-flash`。
 
 ## 2. 规划要点（详见 plan 文件）
 
