@@ -378,6 +378,35 @@ pub fn run_loop(
                     tracing::error!("System error: {}", error);
                 }
 
+                AgenticEvent::ContextCompressionStarted { turn_id, .. } => {
+                    if chat_state.current_turn_id().map_or(true, |id| id == turn_id) {
+                        chat_view.set_status(Some("Context compression started".to_string()));
+                        needs_redraw = true;
+                        tracing::info!("Context compression started");
+                    }
+                }
+                AgenticEvent::ContextCompressionCompleted {
+                    turn_id,
+                    tokens_before,
+                    tokens_after,
+                    ..
+                } => {
+                    if chat_state.current_turn_id().map_or(true, |id| id == turn_id) {
+                        chat_view.set_status(Some(format!(
+                            "Context compressed: {tokens_before} → {tokens_after} tokens"
+                        )));
+                        needs_redraw = true;
+                        tracing::info!("Context compressed: {} -> {} tokens", tokens_before, tokens_after);
+                    }
+                }
+                AgenticEvent::ContextCompressionFailed { turn_id, error, .. } => {
+                    if chat_state.current_turn_id().map_or(true, |id| id == turn_id) {
+                        chat_view.set_status(Some(format!("Context compression failed: {error}")));
+                        needs_redraw = true;
+                        tracing::warn!("Context compression failed: {}", error);
+                    }
+                }
+
                 // Other events we don't need to handle in the UI
                 _ => {}
             }

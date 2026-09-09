@@ -355,6 +355,20 @@ impl ExecMode {
                         return Err(anyhow::anyhow!("System error: {}", error));
                     }
 
+                    AgenticEvent::ContextCompressionStarted { .. } => {
+                        self.print_text(|| println!("\nContext compression started"));
+                    }
+                    AgenticEvent::ContextCompressionCompleted {
+                        tokens_before,
+                        tokens_after,
+                        ..
+                    } => {
+                        self.print_text(|| println!("\nContext compressed: {tokens_before} → {tokens_after} tokens"));
+                    }
+                    AgenticEvent::ContextCompressionFailed { error, .. } => {
+                        self.print_text(|| eprintln!("\nContext compression failed: {error}"));
+                    }
+
                     _ => {}
                 }
             }

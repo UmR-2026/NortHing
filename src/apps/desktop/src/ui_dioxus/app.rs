@@ -52,6 +52,7 @@ pub fn room_app_root() -> Element {
     let mut assistant_draft: Signal<Option<String>> = use_signal(|| None);
     let send_error: Signal<Option<String>> = use_signal(|| None);
     let mut degraded: Signal<Option<String>> = use_signal(|| None);
+    let mut banner: Signal<Option<String>> = use_signal(|| None);
     let mut user_input = use_signal(String::new);
     let mut entries = use_signal(Vec::<MockEntry>::new);
     // W9-1: session-scoped tool allow-list (tool name → auto-approve).
@@ -181,6 +182,7 @@ pub fn room_app_root() -> Element {
                                     streaming.set(false);
                                     active_turn_id.set(None);
                                     degraded.set(None);
+                                    banner.set(None);
                                 }
                                 TurnStateKind::Failed => {
                                     let err_text = error.unwrap_or_else(|| "Turn failed".into());
@@ -193,6 +195,7 @@ pub fn room_app_root() -> Element {
                                     });
                                     streaming.set(false);
                                     active_turn_id.set(None);
+                                    banner.set(None);
                                 }
                                 TurnStateKind::Cancelled => {
                                     let body = cancelled_body(assistant_draft.write().take());
@@ -204,9 +207,15 @@ pub fn room_app_root() -> Element {
                                     streaming.set(false);
                                     active_turn_id.set(None);
                                     degraded.set(None);
+                                    banner.set(None);
                                 }
                                 TurnStateKind::Started => {}
                             }
+                        }
+                    }
+                    KernelEventDto::Banner { message, .. } => {
+                        if *streaming.read() {
+                            banner.set(Some(message));
                         }
                     }
                     _ => {}
@@ -266,6 +275,7 @@ pub fn room_app_root() -> Element {
         let mut session_id_signal = session_id_signal;
         let mut entries = entries;
         let degraded = degraded;
+        let mut banner = banner;
         let existing_sid = session_id_signal();
         let text_witness = text.clone();
         spawn(async move {
@@ -287,6 +297,7 @@ pub fn room_app_root() -> Element {
                     }
                     active_turn_id.set(Some(turn_id));
                     streaming.set(true);
+                    banner.set(None);
                     user_input.set(String::new());
                     send_error.set(None);
                     entries.write().push(MockEntry::Witness {
@@ -309,6 +320,7 @@ pub fn room_app_root() -> Element {
     let stop_action = move || {
         let mut streaming = streaming;
         let mut active_turn_id = active_turn_id;
+        let mut banner = banner;
         if let Some(turn_id) = active_turn_id() {
             spawn(async move {
                 if let Err(e) = api::stop_turn(&turn_id).await {
@@ -318,6 +330,7 @@ pub fn room_app_root() -> Element {
         }
         streaming.set(false);
         active_turn_id.set(None);
+        banner.set(None);
     };
 
     let (wm_left, geom_rx_left, theme_left) = (window_manager.clone(), geometry_rx_arc.clone(), theme.clone());
@@ -500,6 +513,11 @@ pub fn room_app_root() -> Element {
 
                     if let Some(reason) = degraded.read().as_ref() {
                         div { class: "degraded-banner", "{reason}" }
+                    }
+                    if streaming() {
+                        if let Some(msg) = banner.read().as_ref() {
+                            div { class: "degraded-banner", "{msg}" }
+                        }
                     }
 
                     div { class: "chat-flow", id: "chat-flow",

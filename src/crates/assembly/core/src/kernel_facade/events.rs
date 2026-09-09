@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use northhing_kernel_api::error::KernelError;
-use northhing_kernel_api::events::{KernelEventDto, SubscriptionId};
+use northhing_kernel_api::events::{BannerLevel, KernelEventDto, SubscriptionId};
 use tracing::warn;
 
 use crate::agentic::events::{AgenticEvent, EventSubscriber};
@@ -295,6 +295,22 @@ pub(crate) fn agentic_event_to_dtos(event: &AgenticEvent) -> Vec<KernelEventDto>
             }
             _ => vec![],
         },
+        AgenticEvent::ContextCompressionStarted { .. } => vec![KernelEventDto::Banner {
+            level: BannerLevel::Info,
+            message: "Context compression started".to_string(),
+        }],
+        AgenticEvent::ContextCompressionCompleted {
+            tokens_before,
+            tokens_after,
+            ..
+        } => vec![KernelEventDto::Banner {
+            level: BannerLevel::Info,
+            message: format!("Context compressed: {tokens_before} → {tokens_after} tokens"),
+        }],
+        AgenticEvent::ContextCompressionFailed { error, .. } => vec![KernelEventDto::Banner {
+            level: BannerLevel::Error,
+            message: format!("Context compression failed: {error}"),
+        }],
         _ => vec![],
     }
 }
@@ -335,5 +351,70 @@ pub(crate) fn session_to_dto(s: &crate::agentic::core::Session) -> super::Sessio
             northhing_core_types::SessionKind::Subagent => super::SessionKindDto::Subagent,
             northhing_core_types::SessionKind::EphemeralChild => super::SessionKindDto::EphemeralChild,
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_agentic_event_to_dtos_context_compression_banners() {
+        let started = AgenticEvent::ContextCompressionStarted {
+            session_id: "s1".into(),
+            turn_id: "t1".into(),
+            compression_id: "c1".into(),
+            trigger: "threshold".into(),
+            tokens_before: 10000,
+            context_window: 12000,
+            threshold: 0.8,
+        };
+        let dtos = agentic_event_to_dtos(&started);
+        assert_eq!(dtos.len(), 1);
+        match &dtos[0] {
+            KernelEventDto::Banner { level, message } => {
+                assert!(matches!(level, BannerLevel::Info));
+                assert_eq!(message, "Context compression started");
+            }
+            other => panic!("expected Banner, got {:?}", other),
+        }
+
+        let completed = AgenticEvent::ContextCompressionCompleted {
+            session_id: "s1".into(),
+            turn_id: "t1".into(),
+            compression_id: "c1".into(),
+            compression_count: 1,
+            tokens_before: 10000,
+            tokens_after: 4200,
+            compression_ratio: 0.42,
+            duration_ms: 120,
+            has_summary: true,
+            summary_source: "llm".into(),
+        };
+        let dtos = agentic_event_to_dtos(&completed);
+        assert_eq!(dtos.len(), 1);
+        match &dtos[0] {
+            KernelEventDto::Banner { level, message } => {
+                assert!(matches!(level, BannerLevel::Info));
+                assert_eq!(message, "Context compressed: 10000 → 4200 tokens");
+            }
+            other => panic!("expected Banner, got {:?}", other),
+        }
+
+        let failed = AgenticEvent::ContextCompressionFailed {
+            session_id: "s1".into(),
+            turn_id: "t1".into(),
+            compression_id: "c1".into(),
+            error: "context window too small".into(),
+        };
+        let dtos = agentic_event_to_dtos(&failed);
+        assert_eq!(dtos.len(), 1);
+        match &dtos[0] {
+            KernelEventDto::Banner { level, message } => {
+                assert!(matches!(level, BannerLevel::Error));
+                assert_eq!(message, "Context compression failed: context window too small");
+            }
+            other => panic!("expected Banner, got {:?}", other),
+        }
     }
 }
