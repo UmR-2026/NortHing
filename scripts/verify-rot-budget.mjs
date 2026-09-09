@@ -983,7 +983,7 @@ if (process.argv[1] && path.resolve(fileURLToPath(import.meta.url)).toLowerCase(
   }
 
   let base;
-  if (flags.base) {
+  if (flags.base !== undefined) {
     if (typeof flags.base !== 'string' || flags.base.trim() === '') {
       console.error('Error: --base requires a commit SHA or ref');
       process.exit(1);

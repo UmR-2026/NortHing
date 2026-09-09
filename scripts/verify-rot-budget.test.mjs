@@ -1068,3 +1068,12 @@ test('W19-2 F8: attestFixtureRegistry polishes invalid entry to <invalid entry>'
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
+
+test('W21-1 F1: spawn verify-rot-budget.mjs --base= fails closed with exit 1 and error message', () => {
+  const proc = spawnSync(process.execPath, [SCRIPT_PATH, '--base='], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+  });
+  assert.equal(proc.status, 1);
+  assert.ok(proc.stderr.includes('--base requires a commit SHA or ref'));
+});
