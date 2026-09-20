@@ -7,6 +7,8 @@
 //!
 //! **SECURITY**: Every subcommand requires `NORTHHING_INTERNAL_TOKEN` env var
 //! or `--internal-token` arg. Without it, exit code 77 (capability denied).
+//! Capability token gate is format-only (length ≥ 32); cryptographic validation
+//! deferred — see verify_capability_token.
 //!
 //! This is NOT advertised to end users. Documentation lives in
 //! `docs/internal/cli.md` only.

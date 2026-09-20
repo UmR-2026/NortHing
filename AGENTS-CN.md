@@ -22,9 +22,12 @@ northhing 是一个 Rust 工作区加上 React 前端的组合。
 | 1 | 接口与入口 | `src/apps/*`、`src/web-ui`、`northing-installer`、`tests/e2e`、`src/crates/interfaces` | 产品宿主、命令、UI 入口、协议接口以及跨表面测试 | desktop、CLI、server、Web UI、installer、E2E、`acp` | 最近本地 `AGENTS.md`；[interfaces](src/crates/interfaces/AGENTS.md) |
 | 2 | 产品装配 | `src/crates/assembly` | 兼容性导出、产品能力选择、product-full 装配以及适配器/服务注册 | `core`、`product-capabilities` | [AGENTS.md](src/crates/assembly/AGENTS.md) |
 | 3 | 适配器 | `src/crates/adapters` | AI 协议适配器与外部提供方翻译 | `ai-adapters` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
-| 4 | 服务 | `src/crates/services` | 可复用的 OS、文件系统、终端、MCP、远程、git、watch、进程、会话持久化原语以及网络实现 | `services-core`、`services-integrations`、`terminal` | [AGENTS.md](src/crates/services/AGENTS.md) |
+| 4 | 服务 | `src/crates/services` | 可复用的 OS、文件系统、终端、MCP、远程、git、watch、进程、会话持久化原语以及网络实现 | `services-core`、`services-integrations`、`terminal`、`debug-log` | [AGENTS.md](src/crates/services/AGENTS.md) |
 | 5 | 执行原语 | `src/crates/execution` | 可移植的 agent、stream、DeepReview 策略/报告、typed-service、tool-contract 以及 tool-execution 构件 | `agent-dispatch`、`agent-runtime`、`agent-stream`、`tool-contracts`、`runtime-services`、`tool-execution` | [AGENTS.md](src/crates/execution/AGENTS.md) |
-| 6 | 稳定契约与产品域 | `src/crates/contracts` | 共享 DTO、事件形态、运行时端口以及产品域契约/策略 | `core-types`、`events`、`runtime-ports`、`product-domains` | [AGENTS.md](src/crates/contracts/AGENTS.md) |
+| 6 | 稳定契约与产品域 | `src/crates/contracts` | 共享 DTO、事件形态、运行时端口以及产品域契约/策略 | `core-types`、`events`、`runtime-ports`、`product-domains`、`kernel-api`、`disposable` | [AGENTS.md](src/crates/contracts/AGENTS.md) |
+| 7 | 支持 | `src/crates/support` | 测试支撑与内部工具（豁免生产分层约束的辅助 crate） | `test-support`、`cli-internal` | 无（无就近 `AGENTS.md`） |
+
+机械对照：以根 `Cargo.toml` workspace members + `scripts/core-boundaries/rules/crate-layout.mjs` 为准。
 
 边界规则：
 
@@ -192,7 +195,7 @@ await api.invoke('your_command', { request: { ... } });
 | 仅区域资源变更 | `pnpm run i18n:audit` |
 | 区域契约或共享词条 | `pnpm run i18n:generate && pnpm run i18n:contract:test && pnpm run i18n:audit` |
 | Web UI i18n 运行时、命名空间加载或直接的 `i18nService.t(...)` 使用 | `pnpm run i18n:contract:test && pnpm run type-check:web && pnpm --dir src/web-ui run test:run src/infrastructure/i18n/core/I18nService.test.ts` |
-| `core`、适配器或服务中的共享 Rust 逻辑 | `cargo check --workspace`，并在行为变化时附加最近的聚焦 `cargo test` |
+| `core`、适配器或服务中的共享 Rust 逻辑 | `cargo check --workspace`，并在行为变化时附加最近的聚焦 `cargo test`（`northhing-core` 定向测试须带 `--features product-full`，裸跑 E0433） |
 | 桌面集成、Tauri API、浏览器/电脑使用或仅桌面行为 | `cargo check -p northhing-desktop`，并在行为变化时附加聚焦桌面测试 |
 | 由桌面冒烟/功能流程覆盖的行为 | 优先使用最近的聚焦 E2E/冒烟检查；除非构建行为变化，否则依赖 CI 完成广覆盖构建/测试 |
 | `src/crates/adapters/ai-adapters` | 使用上面相关的 Rust 检查；仅当流契约变化时附加 `cargo test -p northhing-agent-stream` |

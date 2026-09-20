@@ -257,6 +257,14 @@
 - **Proposed fix**: 存量脱敏或规则豁免（如归档路径/测试数据排除），待拍板。
 - **Status**: resolved (2026-09-08, W20-2 — 用户 2026-09-08 拍板混合方案：check-repo-hygiene.mjs 豁免 docs/archive/ 目录 local-path 扫描保持归档历史冻结；非 archive 存量 75 个文件全部脱敏，local-path 替换为 <LOCAL_PATH>，token 替换为 <TOKEN>)
 
+### P2-25: shell_safety.rs 命令执行确认闸为 Phase 2 stub（Phase 3 未接线）
+
+- **Symptom**: `src/crates/assembly/core/src/agentic/tools/implementations/shell_safety.rs` 的 `guard_command_execution` 确认段为 Phase 2 stub，仅记录 `"allow-stub"` 审计日志，Phase 3 未接线，未实际执行用户确认拦截。
+- **Mitigation**: 管线层真实确认流在位（tool_confirmation.rs / exec_retry.rs + AND 语义 process_result.rs:225-234 + 默认需确认），实际风险低但 stub 必须入账。
+- **Evidence**: `src/crates/assembly/core/src/agentic/tools/implementations/shell_safety.rs` 函数本体 `:225-248`、`"allow-stub"` 审计 `:244`、Phase 3 未接线自曝注释 `:238-239`。
+- **Proposed fix**: Phase 3 接 `request_user_confirmation`。
+- **Status**: active
+
 ## Change Protocol
 
 - **New entry**: Add with next available ID, include evidence (file:line), proposed fix, and status.
