@@ -184,7 +184,7 @@
 - **Symptom**: facts.jsonl dedup uses exact text match — cannot absorb whitespace/wording variants, so the store bloats with near-duplicates. confidence is always Med and scope always Workspace; the High/Low/Global production paths are not implemented.
 - **Evidence**: External review 2026-07-23 §四.4 / §四.8; C3 facts distillation code.
 - **Proposed fix**: Normalize before dedup (or similarity-based dedup); implement confidence/scope derivation paths or remove the unused enum variants.
-- **Status**: active (low priority)
+- **Status**: resolved (2026-09-20, W23-4: user ruling 2026-09-09 — dream-sweep is the design answer; decision-only closure, no code change)
 
 ### P2-15: P1-C3 merged to main while the desktop crate did not compile (process defect)
 
@@ -206,7 +206,7 @@
 - **Symptom**: `client_factory.rs` now owns a private `init_once_with` helper implementing the double-checked-locking init skeleton, while `service/config/global.rs` `GlobalConfigManager::initialize` still hand-rolls the same pattern with its own `INIT_MUTEX`.
 - **Evidence**: Task B4 review Minor-3 + Wave1 final review §5 (2026-08-06), commit `50b0f44`.
 - **Proposed fix**: if a third caller appears, lift the helper into a shared sync utility module and migrate both call sites; not worth it at two call sites.
-- **Status**: active (low priority)
+- **Status**: frozen (2026-09-20, W23-4: user ruling 2026-09-09 — deferred by design; lift to shared sync utility only when a third caller appears)
 
 ### P2-18: `LspManager::uninstall_plugin` has no production caller
 
