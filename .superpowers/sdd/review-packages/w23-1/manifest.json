@@ -1,0 +1,24 @@
+{
+  "base": "c8f1023",
+  "tip": "bd271a6",
+  "allowlist": "C:/WINDOWS/TEMP/opencode/w23-1-allowlist.txt",
+  "diffSha256": "4dc57799d78f4533377fb19c2b58ad9e6bd796ac7a61e5a92f2cadacf56ee2c7",
+  "materials": {
+    "brief": {
+      "path": ".superpowers/sdd/w23-1-brief.md",
+      "sha256": "c5fcf321ff592fe76384df339505e666f9e702b661411ef65f8fba1a23913cc1",
+      "bytes": 6581
+    },
+    "diff": {
+      "path": ".superpowers\\sdd\\review-packages\\w23-1\\review.diff",
+      "sha256": "4dc57799d78f4533377fb19c2b58ad9e6bd796ac7a61e5a92f2cadacf56ee2c7",
+      "bytes": 10012
+    },
+    "report": {
+      "path": ".superpowers/sdd/w23-1-report.md",
+      "sha256": "e795385bc8bf62137390043ae23b641d5597449a60f9f88c402f247c6c71798f",
+      "bytes": 6441
+    }
+  },
+  "assembledAt": "2026-09-20T15:15:44.353Z"
+}
