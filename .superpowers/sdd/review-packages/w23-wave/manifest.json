@@ -1,0 +1,24 @@
+{
+  "base": "0cac642",
+  "tip": "6b92232",
+  "allowlist": "C:/WINDOWS/TEMP/opencode/w23-wave-allowlist.txt",
+  "diffSha256": "de70e8da211cb9ad3c6592b959b9a150a61a226a10a98e2adac95e0a174691e4",
+  "materials": {
+    "brief": {
+      "path": ".superpowers/sdd/plan-2026-09-10-w23-w26-closure-and-decoupling.md",
+      "sha256": "08a7522c589bbf69bfa728bba6b04024c4a388fd62c066168131e812995a01d1",
+      "bytes": 5781
+    },
+    "diff": {
+      "path": ".superpowers\\sdd\\review-packages\\w23-wave\\review.diff",
+      "sha256": "de70e8da211cb9ad3c6592b959b9a150a61a226a10a98e2adac95e0a174691e4",
+      "bytes": 168762
+    },
+    "report": {
+      "path": ".superpowers/sdd/w23-1-report.md",
+      "sha256": "5e8d09b3fd814fcf9630113d9de8f1630e5fa9580ba37f2839fe61860de9a812",
+      "bytes": 6506
+    }
+  },
+  "assembledAt": "2026-09-20T16:25:46.795Z"
+}
