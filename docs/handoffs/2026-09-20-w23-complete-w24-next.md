@@ -4,11 +4,11 @@
 
 ## 0. 一句话状态
 
-**W23 波 4/4 全部闭环**（W23-1 文档批 / W23-2 事件诚实化 / W23-3 meta 小修 / W23-4 台账处置），各单 implementer = `gemini-38-flash-agy` 一轮 DONE，波级终审（gemini-38-flash 补位）= **APPROVE**（0C/0I，1M accept-and-close）。本地领先 origin/main **23 commits 未推送**（推送需用户授权）。下一波 = W24 闭环波。
+**W23 波 4/4 全部闭环**（W23-1 文档批 / W23-2 事件诚实化 / W23-3 meta 小修 / W23-4 台账处置），各单 implementer = `gemini-38-flash-agy` 一轮 DONE，波级终审（gemini-38-flash 补位）= **APPROVE**（0C/0I，1M accept-and-close）。**已推送**（origin/main = `d9e4df1`，25 commits 含 W22 遗留 6 + 本波 17 + handoff 2），**CI run `35527292757` 7/7 jobs success**（Rust Build + Serial Tests + 5 快检全绿，本波代码改动已过 CI 实证）。下一波 = W24 闭环波，等放行。
 
 ## 1. 下次 session 第一事
 
-用户放行后启动 W24（gate-registry + CI 接线 + D7 跨平台哨兵 / 组装器收口 / 分层表单一源）。派发前先确认两件事：① **token_rhythm 已恢复**（用户 2026-09-20 收工时确认：key 在 `opencode.jsonc` provider options（`sk_tr_...`，tokenrhythm.studio/v1），此前 judge-53/reviewer-53 派发失败是账户额度侧 402 Payment Required、非缺 key——本波全程由 m3 + gemini-38-flash 补位跑通；**下次首发 judge-53/reviewer-53 时先小探针验证再进双 judge 车道**）；② 本波 23 commits 是否获授权推送。
+用户放行后启动 W24（gate-registry + CI 接线 + D7 跨平台哨兵 / 组装器收口 / 分层表单一源）。派发前先确认：**token_rhythm 已恢复**（用户 2026-09-20 收工时确认：key 在 `opencode.jsonc` provider options（`sk_tr_...`，tokenrhythm.studio/v1），此前 judge-53/reviewer-53 派发失败是账户额度侧 402 Payment Required、非缺 key——本波全程由 m3 + gemini-38-flash 补位跑通；**首次派 judge-53/reviewer-53 时先小探针验证再进双 judge 车道**）。推送已完成，无遗留授权项。
 
 ## 2. 本波完成情况（BASE `0cac642` → HEAD `6b92232`，17 commits）
 
@@ -23,10 +23,10 @@
 
 ## 3. 盘面
 
-- origin/main = `9443af8`；本地领先 **23 commits**（W22 遗留 6 个 docs + 本波 17 个），**未推送，等用户授权**。
-- 工作树干净（仅 review-packages/w23-wave + wave-review 两个待提交产物，见下）。
+- origin/main = `d9e4df1`（2026-09-20 已推送，用户授权；本地与远程同步，`git status` 干净）。
+- 工作树干净，无 stash，无在跑子代理。
 - 余量：task-gate 13 行（834/847）/ checker 50 行（999/1050）/ scripts 45/48 / sdd 114/400。**unix_epoch_inline 69/69 顶格**——W25-2 verdict 三档一期时优先处理。
-- CI 最后绿 = run 34374829227（9443af8 为 md-only 不触发；本波技术改动未上 CI，推送后由 CI 验）。
+- CI 最新绿 = run `35527292757`（d9e4df1，**7/7 jobs success**：Rust Build Check + Rust Tests Serial + kernel-api dep guard + repo hygiene + rot budget + core boundary + i18n contract）——本波代码改动（events.rs / verify-rot-budget.mjs / ci.yml 注释）已过 CI 实证，基线可继承。
 - 波级终审独立实跑：hygiene / verify-rot-budget / selftest 53 / task-gate 波级 allowlist 全 exit 0；补跑 test.mjs 39/39、cargo check --workspace 0 错误。
 
 ## 4. 子代理运维（本波实证）
@@ -38,7 +38,7 @@
 
 ## 5. 待决与卡点
 
-- **推送授权**：23 commits（含 W22 遗留 6 个）未推，等用户。
+- **推送：已完成**（2026-09-20，用户授权；origin/main = `d9e4df1`，CI run `35527292757` 7/7 success）。
 - **token_rhythm**：用户 2026-09-20 确认已恢复（额度侧）。下次 session 首次派 judge-53/reviewer-53 前小探针验证，通过则双 judge 车道回归正编（W24-1/W24-3 是 meta-ratchet 单，需要双 judge）。
 - **Minor triage（波末已 close）**：W23-4 协议 commit reference vs 任务 ID 引用（accept-and-close，P2-15/P2-16 先例）。
 - 缓办在案（不变）：D2 汇率 / D4 速率档 / E01 / P2-17 合并（等第三调用方，已 frozen）/ K4b / K3 慢线。
