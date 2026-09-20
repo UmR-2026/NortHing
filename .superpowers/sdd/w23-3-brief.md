@@ -2,11 +2,11 @@
 
 ## 任务标识
 
-W23-3（防腐决策包 D7-① + coder-qwf A-4；用户拍板 2026-09-09）。**meta-ratchet 车道**（两文件均 ∈ metaRatchetPaths）：双 judge + 用户签字（已含于拍板）。
+W23-3（防腐决策包 D7-① + coder-qwf A-4；用户拍板 2026-09-09）。**meta-ratchet 车道**：改动文件中 `.github/workflows/ci.yml` 与 `scripts/verify-rot-budget.mjs` ∈ metaRatchetPaths（policy.json:20-31 已核实）→ 双 judge + 用户签字（已含于 2026-09-09 拍板）。`verify-rot-budget.test.mjs` 本身不在 metaRatchetPaths，但同单改动不豁免车道。
 
 ## BASE
 
-`c544749`（main HEAD，工作树干净；派发时 task-gate 起点 = 本 brief 提交后的 docs commit）。
+BASE = 编排者派发正文给出的 7 位 SHA（brief 定版时的 main HEAD 以派发正文为准；其后不得再有非本单允许文件集的 commit，否则 task-gate 起点顺延）。
 
 ## 背景与 BASE 证据（编排者已实测）
 
@@ -35,13 +35,13 @@ report 写 `.superpowers/sdd/w23-3-report.md`，不进验收 diff。
 - checker 改动 ≤3 行；禁动 attestFixtureRegistry 其他分支。
 - report 贴验证输出 + exit code；结尾状态词。
 
-## 验证（编排者已 BASE 预跑：全部绿）
+## 验证（编排者已 BASE 预跑：4/4 命令全绿，实测基线如下）
 
-1. `node scripts/verify-rot-budget.mjs --selftest` → 53 checks（BASE 实测绿；修复后若新增 fixture 则数量 +N）。
-2. `node scripts/verify-rot-budget.test.mjs` → 全绿（38 测试含翻转后的 F1.7；BASE 实测绿）。
-3. `node scripts/verify-rot-budget.mjs` → exit 0（主仓 registry 在位，行为不变；BASE 实测绿）。
+1. `node scripts/verify-rot-budget.mjs --selftest` → exit 0，**53 checks passed (33 negative, 20 positive)**（BASE 实测；修复后若新增 fixture 则数量 +N）。
+2. `node scripts/verify-rot-budget.test.mjs` → exit 0，**pass 39**（BASE 实测；含翻转后的 F1.7，一个不许红）。
+3. `node scripts/verify-rot-budget.mjs` → exit 0（BASE 实测；主仓 registry 在位，verdict rotting 为存量零余量 warning，非本单引入，行为不变）。
 4. **红态探针**（report 必贴）：临时把 registry.json 改名移走 → `node scripts/verify-rot-budget.mjs` 必须 exit 1 且违规清单含 registry missing 条目；探针后恢复原位，report 附恢复确认（`git status` 干净）。
-5. `node scripts/check-repo-hygiene.mjs` → exit 0。
+5. `node scripts/check-repo-hygiene.mjs` → exit 0（BASE 实测绿）。
 6. CI 语法：`git diff` 仅注释行（report 贴 diff 段证明零行为变化）。
 
 ## 禁区
