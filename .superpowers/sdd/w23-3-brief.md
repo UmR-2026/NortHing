@@ -25,8 +25,8 @@ report 写 `.superpowers/sdd/w23-3-report.md`，不进验收 diff。
 ## 功能要求
 
 1. **ci.yml 注释诚实化**：:32 改为如实口径——Windows-only 仍为用户拍板（2026-09-05）；E0624 已修（2026-09-08 W20-1）；跨平台编译哨兵待 W24。示例形态：「Windows-only per user decision 2026-09-05; terminal-core E0624 fixed 2026-09-08 (W20-1); cross-target compile sentinel planned (W24)」。仅注释，零行为变化。
-2. **A-4 fail-closed**：`attestFixtureRegistry` 缺文件分支改为违规（violation），文案指明「registry missing = fixture 完整性无锁」（对照既有空数组违规的文案风格）。
-3. **F1.7 测试翻转**：`verify-rot-budget.test.mjs` 的 F1.7 由「skips and passes」改为「fails with violation」，测试名同步改实（如 `missing fixture registry file fails closed`）。若 selftest-cases 侧有同义断言一并翻转；若改 fixture 文件本体则 registry.json sha256 同步 bump（W18-7 attestation 机制会抓不一致）。
+2. **A-4 fail-closed**：`attestFixtureRegistry` 缺文件分支改为违规（violation），**violation 文案钉死为**：`fixture registry file missing (fail-closed): ${regPath}`（对照既有空数组违规 `registry fixtures missing or empty` 的 terse 风格；`${regPath}` 为既有变量名，照用）。
+3. **F1.7 测试翻转**：`verify-rot-budget.test.mjs` 的 F1.7 由「skips and passes」改为「fails with violation」，测试名同步改实（如 `missing fixture registry file fails closed`），断言必须逐字包含上面钉死的文案（fix 与 test assertion 逐字对齐）。若 selftest-cases 侧有同义断言一并翻转；若改 fixture 文件本体则 registry.json sha256 同步 bump（W18-7 attestation 机制会抓不一致）。
 
 ## Constraints
 
@@ -40,7 +40,7 @@ report 写 `.superpowers/sdd/w23-3-report.md`，不进验收 diff。
 1. `node scripts/verify-rot-budget.mjs --selftest` → exit 0，**53 checks passed (33 negative, 20 positive)**（BASE 实测；修复后若新增 fixture 则数量 +N）。
 2. `node scripts/verify-rot-budget.test.mjs` → exit 0，**pass 39**（BASE 实测；含翻转后的 F1.7，一个不许红）。
 3. `node scripts/verify-rot-budget.mjs` → exit 0（BASE 实测；主仓 registry 在位，verdict rotting 为存量零余量 warning，非本单引入，行为不变）。
-4. **红态探针**（report 必贴）：临时把 registry.json 改名移走 → `node scripts/verify-rot-budget.mjs` 必须 exit 1 且违规清单含 registry missing 条目；探针后恢复原位，report 附恢复确认（`git status` 干净）。
+4. **红态探针**（report 必贴）：`attestFixtureRegistry` 仅在 `--selftest` 路径被调（verify-rot-budget.mjs:939，主路径 verifyRotBudget 不读 registry——编排者已核实），故探针命令 = 临时把 `scripts/fixtures/rot-budget/registry.json` 改名移走 → `node scripts/verify-rot-budget.mjs --selftest` 必须 exit 1 且违规清单含 `fixture registry file missing` 条目；**旁证**：registry 移走期间主路径 `node scripts/verify-rot-budget.mjs` 仍 exit 0（证明主路径行为不变）。探针后恢复原位，report 附恢复确认（`git status` 干净 + registry.json 内容 sha256 与探针前一致）。
 5. `node scripts/check-repo-hygiene.mjs` → exit 0（BASE 实测绿）。
 6. CI 语法：`git diff` 仅注释行（report 贴 diff 段证明零行为变化）。
 
