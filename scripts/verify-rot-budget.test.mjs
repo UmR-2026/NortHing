@@ -963,15 +963,16 @@ test('W18-7 F1.6: fixture registry missing or empty fixtures array fails', () =>
   }
 });
 
-test('W18-7 F1.7: missing fixture registry file skips attestation and passes', () => {
+test('W18-7 F1.7: missing fixture registry file fails closed', () => {
   const tmpDir = createFixtureDir();
   try {
     const fixturesDir = path.join(tmpDir, 'scripts', 'fixtures', 'rot-budget');
     fs.mkdirSync(fixturesDir, { recursive: true });
 
     const result = attestFixtureRegistry(fixturesDir, tmpDir);
-    assert.equal(result.success, true);
-    assert.equal(result.violations.length, 0);
+    assert.equal(result.success, false);
+    const regPath = path.join(fixturesDir, 'registry.json');
+    assert.ok(result.violations.includes(`fixture registry file missing (fail-closed): ${regPath}`));
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }

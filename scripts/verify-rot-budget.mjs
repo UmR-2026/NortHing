@@ -383,7 +383,7 @@ export function attestVerdictRubric(policyPath, projectRoot = process.cwd()) {
 
 export function attestFixtureRegistry(fixturesDir, projectRoot = process.cwd()) {
   const regPath = path.join(fixturesDir, 'registry.json');
-  if (!fs.existsSync(regPath)) return { success: true, violations: [] };
+  if (!fs.existsSync(regPath)) return { success: false, violations: [`fixture registry file missing (fail-closed): ${regPath}`] };
   let reg;
   try { reg = JSON.parse(fs.readFileSync(regPath, 'utf8')); } catch (e) { return { success: false, violations: [`malformed registry: ${e.message}`] }; }
   if (!reg || !Array.isArray(reg.fixtures) || reg.fixtures.length === 0) return { success: false, violations: ['registry fixtures missing or empty'] };

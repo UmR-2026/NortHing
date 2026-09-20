@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Windows-only per user decision 2026-09-05; non-Windows builds currently broken (terminal-core E0624), see tech-debt-ledger
+        # Windows-only per user decision 2026-09-05; terminal-core E0624 fixed 2026-09-08 (W20-1); cross-target compile sentinel planned (W24)
         os:
           - windows-latest
     steps:
