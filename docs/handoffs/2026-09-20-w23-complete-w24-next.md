@@ -8,7 +8,7 @@
 
 ## 1. 下次 session 第一事
 
-用户放行后启动 W24（gate-registry + CI 接线 + D7 跨平台哨兵 / 组装器收口 / 分层表单一源）。派发前先确认两件事：① token_rhythm apikey 是否已更新（judge-53/reviewer-53 恢复与否决定双 judge 车道编排）；② 本波 23 commits 是否获授权推送。
+用户放行后启动 W24（gate-registry + CI 接线 + D7 跨平台哨兵 / 组装器收口 / 分层表单一源）。派发前先确认两件事：① **token_rhythm 已恢复**（用户 2026-09-20 收工时确认：key 在 `opencode.jsonc` provider options（`sk_tr_...`，tokenrhythm.studio/v1），此前 judge-53/reviewer-53 派发失败是账户额度侧 402 Payment Required、非缺 key——本波全程由 m3 + gemini-38-flash 补位跑通；**下次首发 judge-53/reviewer-53 时先小探针验证再进双 judge 车道**）；② 本波 23 commits 是否获授权推送。
 
 ## 2. 本波完成情况（BASE `0cac642` → HEAD `6b92232`，17 commits）
 
@@ -31,7 +31,7 @@
 
 ## 4. 子代理运维（本波实证）
 
-- **judge-53/reviewer-53 全程缺席**：auth.json 无 token_rhythm key，派发即 Payment Required。W23-3（meta-ratchet 双 judge 单）第二审查位按预案 `gemini-38-flash` 补位，波级终审同样补位——**补位结论独立有效**。
+- **judge-53/reviewer-53 全程缺席**：token_rhythm 账户额度侧 402 Payment Required（用户 2026-09-20 收工前确认已恢复——key 一直在 `opencode.jsonc` provider options，**不是 auth.json 缺 key，此前记忆归因错误已订正**）。W23-3（meta-ratchet 双 judge 单）第二审查位按预案 `gemini-38-flash` 补位，波级终审同样补位——**补位结论独立有效**。
 - minimax-m3 brief 复审环节依旧是最大质量杠杆（2 Critical 实证）；implementer `gemini-38-flash-agy` 四单全一轮 DONE，零修复轮。
 - m3 子代理**无 Write 工具**时会把报告写在回复里——编排者代存盘后必须 commit（W23-2 吃过一次哑巴亏）。
 - report 绝对路径雷同 W22-2：implementer 已用 `<RUSTUP>` 占位（dispatch 里预钉生效）；m3 审查报告里出现的 allowlist 临时路径由编排者清洗。
@@ -39,7 +39,7 @@
 ## 5. 待决与卡点
 
 - **推送授权**：23 commits（含 W22 遗留 6 个）未推，等用户。
-- **token_rhythm apikey**：用户将在下个 session 更新；更新前 judge 位只有 minimax-m3。
+- **token_rhythm**：用户 2026-09-20 确认已恢复（额度侧）。下次 session 首次派 judge-53/reviewer-53 前小探针验证，通过则双 judge 车道回归正编（W24-1/W24-3 是 meta-ratchet 单，需要双 judge）。
 - **Minor triage（波末已 close）**：W23-4 协议 commit reference vs 任务 ID 引用（accept-and-close，P2-15/P2-16 先例）。
 - 缓办在案（不变）：D2 汇率 / D4 速率档 / E01 / P2-17 合并（等第三调用方，已 frozen）/ K4b / K3 慢线。
 
