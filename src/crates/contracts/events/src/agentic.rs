@@ -97,6 +97,7 @@ pub enum AgenticEvent {
         title: String,
         method: String,
     },
+    // not yet emitted (reserved)
     ImageAnalysisStarted {
         session_id: String,
         image_count: usize,
@@ -105,6 +106,7 @@ pub enum AgenticEvent {
         image_metadata: Option<serde_json::Value>,
     },
 
+    // not yet emitted (reserved)
     ImageAnalysisCompleted {
         session_id: String,
         success: bool,
@@ -290,9 +292,8 @@ pub enum AgenticEvent {
     },
 
     /// User "steering" message injected into a running dialog turn at a model
-    /// round boundary (Codex-style mid-turn injection). The frontend renders
-    /// this as a synthetic record inside the current turn so the user can see
-    /// the message they just steered with.
+    /// round boundary (Codex-style mid-turn injection).
+    // TODO(surface): The frontend renders this as a synthetic record inside the current turn so the user can see the message they just steered with. (当前无任何 surface 消费（2026-09-09 ZCode 审查）)
     UserSteeringInjected {
         session_id: String,
         turn_id: String,
@@ -304,8 +305,7 @@ pub enum AgenticEvent {
 
     /// A session's bound model has been automatically migrated because the
     /// previously bound model became unavailable (disabled or deleted).
-    /// The frontend should refresh its model selector for the session and
-    /// surface a non-blocking notice so the user knows what happened.
+    // TODO(surface): The frontend should refresh its model selector for the session and surface a non-blocking notice so the user knows what happened. (当前无任何 surface 消费（2026-09-09 ZCode 审查）)
     SessionModelAutoMigrated {
         session_id: String,
         /// The model id the session was using before the migration.

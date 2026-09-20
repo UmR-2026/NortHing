@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use northhing_kernel_api::error::KernelError;
 use northhing_kernel_api::events::{BannerLevel, KernelEventDto, SubscriptionId};
-use tracing::warn;
+use tracing::{debug, warn};
 
 use crate::agentic::events::{AgenticEvent, EventSubscriber};
 
@@ -293,7 +293,42 @@ pub(crate) fn agentic_event_to_dtos(event: &AgenticEvent) -> Vec<KernelEventDto>
                 })]
                 // 不发 TurnPhase——turn 仍在 ToolUse 语境，不因 awaiting 改 phase
             }
-            _ => vec![],
+            crate::agentic::events::ToolEventData::EarlyDetected { .. } => {
+                debug!("ToolEventData::EarlyDetected intentionally dropped at facade");
+                vec![]
+            }
+            crate::agentic::events::ToolEventData::ParamsPartial { .. } => {
+                debug!("ToolEventData::ParamsPartial intentionally dropped at facade");
+                vec![]
+            }
+            crate::agentic::events::ToolEventData::Queued { .. } => {
+                debug!("ToolEventData::Queued intentionally dropped at facade");
+                vec![]
+            }
+            crate::agentic::events::ToolEventData::Waiting { .. } => {
+                debug!("ToolEventData::Waiting intentionally dropped at facade");
+                vec![]
+            }
+            crate::agentic::events::ToolEventData::Progress { .. } => {
+                debug!("ToolEventData::Progress intentionally dropped at facade");
+                vec![]
+            }
+            crate::agentic::events::ToolEventData::Streaming { .. } => {
+                debug!("ToolEventData::Streaming intentionally dropped at facade");
+                vec![]
+            }
+            crate::agentic::events::ToolEventData::StreamChunk { .. } => {
+                debug!("ToolEventData::StreamChunk intentionally dropped at facade");
+                vec![]
+            }
+            crate::agentic::events::ToolEventData::Confirmed { .. } => {
+                debug!("ToolEventData::Confirmed intentionally dropped at facade");
+                vec![]
+            }
+            crate::agentic::events::ToolEventData::Rejected { .. } => {
+                debug!("ToolEventData::Rejected intentionally dropped at facade");
+                vec![]
+            }
         },
         AgenticEvent::ContextCompressionStarted { .. } => vec![KernelEventDto::Banner {
             level: BannerLevel::Info,
@@ -311,7 +346,62 @@ pub(crate) fn agentic_event_to_dtos(event: &AgenticEvent) -> Vec<KernelEventDto>
             level: BannerLevel::Error,
             message: format!("Context compression failed: {error}"),
         }],
-        _ => vec![],
+        AgenticEvent::SessionCreated { .. } => {
+            debug!("SessionCreated intentionally dropped at facade");
+            vec![]
+        }
+        AgenticEvent::SessionStateChanged { .. } => {
+            debug!("SessionStateChanged intentionally dropped at facade");
+            vec![]
+        }
+        AgenticEvent::SessionDeleted { .. } => {
+            debug!("SessionDeleted intentionally dropped at facade");
+            vec![]
+        }
+        AgenticEvent::SessionTitleGenerated { .. } => {
+            debug!("SessionTitleGenerated intentionally dropped at facade");
+            vec![]
+        }
+        AgenticEvent::ImageAnalysisStarted { .. } => {
+            debug!("ImageAnalysisStarted intentionally dropped at facade (reserved, never emitted)");
+            vec![]
+        }
+        AgenticEvent::ImageAnalysisCompleted { .. } => {
+            debug!("ImageAnalysisCompleted intentionally dropped at facade (reserved, never emitted)");
+            vec![]
+        }
+        AgenticEvent::SubagentSessionLinked { .. } => {
+            debug!("SubagentSessionLinked intentionally dropped at facade (consumed by external subscriber)");
+            vec![]
+        }
+        AgenticEvent::TokenUsageUpdated { .. } => {
+            debug!("TokenUsageUpdated intentionally dropped at facade (consumed by external subscriber)");
+            vec![]
+        }
+        AgenticEvent::ThreadGoalUpdated { .. } => {
+            debug!("ThreadGoalUpdated intentionally dropped at facade");
+            vec![]
+        }
+        AgenticEvent::ModelRoundStarted { .. } => {
+            debug!("ModelRoundStarted intentionally dropped at facade (consumed by external subscriber)");
+            vec![]
+        }
+        AgenticEvent::ModelRoundCompleted { .. } => {
+            debug!("ModelRoundCompleted intentionally dropped at facade");
+            vec![]
+        }
+        AgenticEvent::DeepReviewQueueStateChanged { .. } => {
+            debug!("DeepReviewQueueStateChanged intentionally dropped at facade");
+            vec![]
+        }
+        AgenticEvent::UserSteeringInjected { .. } => {
+            debug!("UserSteeringInjected intentionally dropped at facade");
+            vec![]
+        }
+        AgenticEvent::SessionModelAutoMigrated { .. } => {
+            debug!("SessionModelAutoMigrated intentionally dropped at facade");
+            vec![]
+        }
     }
 }
 
@@ -415,6 +505,187 @@ mod tests {
                 assert_eq!(message, "Context compression failed: context window too small");
             }
             other => panic!("expected Banner, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_agentic_event_to_dtos_intentional_drops() {
+        let dropped_outer_events = vec![
+            AgenticEvent::SessionCreated {
+                session_id: "s1".into(),
+                session_name: "test session".into(),
+                agent_type: "general".into(),
+                workspace_path: None,
+                remote_connection_id: None,
+                remote_ssh_host: None,
+            },
+            AgenticEvent::SessionStateChanged {
+                session_id: "s1".into(),
+                new_state: "idle".into(),
+            },
+            AgenticEvent::SessionDeleted {
+                session_id: "s1".into(),
+            },
+            AgenticEvent::SessionTitleGenerated {
+                session_id: "s1".into(),
+                title: "title".into(),
+                method: "auto".into(),
+            },
+            AgenticEvent::ImageAnalysisStarted {
+                session_id: "s1".into(),
+                image_count: 1,
+                user_input: "test".into(),
+                image_metadata: None,
+            },
+            AgenticEvent::ImageAnalysisCompleted {
+                session_id: "s1".into(),
+                success: true,
+                duration_ms: 10,
+            },
+            AgenticEvent::SubagentSessionLinked {
+                session_id: "s1".into(),
+                parent_session_id: "p1".into(),
+                parent_dialog_turn_id: "t1".into(),
+                parent_tool_call_id: "c1".into(),
+                agent_type: None,
+            },
+            AgenticEvent::TokenUsageUpdated {
+                session_id: "s1".into(),
+                turn_id: "t1".into(),
+                model_id: "gpt-4".into(),
+                input_tokens: 10,
+                output_tokens: Some(20),
+                total_tokens: 30,
+                max_context_tokens: None,
+                is_subagent: false,
+                cached_tokens: None,
+                token_details: None,
+            },
+            AgenticEvent::ThreadGoalUpdated {
+                session_id: "s1".into(),
+                goal: None,
+            },
+            AgenticEvent::ModelRoundStarted {
+                session_id: "s1".into(),
+                turn_id: "t1".into(),
+                round_id: "r1".into(),
+                round_index: 0,
+                model_id: Some("gpt-4".into()),
+            },
+            AgenticEvent::ModelRoundCompleted {
+                session_id: "s1".into(),
+                turn_id: "t1".into(),
+                round_id: "r1".into(),
+                has_tool_calls: false,
+                duration_ms: Some(100),
+                provider_id: None,
+                model_id: Some("gpt-4".into()),
+                model_alias: None,
+                first_chunk_ms: None,
+                first_visible_output_ms: None,
+                stream_duration_ms: None,
+                attempt_count: None,
+                failure_category: None,
+                token_details: None,
+            },
+            AgenticEvent::DeepReviewQueueStateChanged {
+                session_id: "s1".into(),
+                turn_id: "t1".into(),
+                queue_state: crate::agentic::events::DeepReviewQueueState {
+                    tool_id: "t1".into(),
+                    subagent_type: "review".into(),
+                    status: crate::agentic::events::DeepReviewQueueStatus::QueuedForCapacity,
+                    reason: None,
+                    queued_reviewer_count: 1,
+                    active_reviewer_count: None,
+                    effective_parallel_instances: None,
+                    optional_reviewer_count: None,
+                    queue_elapsed_ms: None,
+                    run_elapsed_ms: None,
+                    max_queue_wait_seconds: None,
+                    session_concurrency_high: false,
+                },
+            },
+            AgenticEvent::UserSteeringInjected {
+                session_id: "s1".into(),
+                turn_id: "t1".into(),
+                round_index: 0,
+                steering_id: "st1".into(),
+                content: "steer".into(),
+                display_content: "steer".into(),
+            },
+            AgenticEvent::SessionModelAutoMigrated {
+                session_id: "s1".into(),
+                previous_model_id: "m1".into(),
+                new_model_id: "m2".into(),
+                reason: "model_disabled".into(),
+            },
+        ];
+
+        for event in &dropped_outer_events {
+            assert!(
+                agentic_event_to_dtos(event).is_empty(),
+                "expected empty dtos for dropped outer event: {event:?}"
+            );
+        }
+
+        let dropped_inner_tool_events = vec![
+            crate::agentic::events::ToolEventData::EarlyDetected {
+                tool_id: "tool_1".into(),
+                tool_name: "test_tool".into(),
+            },
+            crate::agentic::events::ToolEventData::ParamsPartial {
+                tool_id: "tool_1".into(),
+                tool_name: "test_tool".into(),
+                params: "{}".into(),
+            },
+            crate::agentic::events::ToolEventData::Queued {
+                tool_id: "tool_1".into(),
+                tool_name: "test_tool".into(),
+                position: 1,
+            },
+            crate::agentic::events::ToolEventData::Waiting {
+                tool_id: "tool_1".into(),
+                tool_name: "test_tool".into(),
+                dependencies: vec![],
+            },
+            crate::agentic::events::ToolEventData::Progress {
+                tool_id: "tool_1".into(),
+                tool_name: "test_tool".into(),
+                message: "in progress".into(),
+                percentage: 0.5,
+            },
+            crate::agentic::events::ToolEventData::Streaming {
+                tool_id: "tool_1".into(),
+                tool_name: "test_tool".into(),
+                chunks_received: 3,
+            },
+            crate::agentic::events::ToolEventData::StreamChunk {
+                tool_id: "tool_1".into(),
+                tool_name: "test_tool".into(),
+                data: serde_json::json!({"chunk": 1}),
+            },
+            crate::agentic::events::ToolEventData::Confirmed {
+                tool_id: "tool_1".into(),
+                tool_name: "test_tool".into(),
+            },
+            crate::agentic::events::ToolEventData::Rejected {
+                tool_id: "tool_1".into(),
+                tool_name: "test_tool".into(),
+            },
+        ];
+
+        for tool_event_data in dropped_inner_tool_events {
+            let event = AgenticEvent::ToolEvent {
+                session_id: "s1".into(),
+                turn_id: "t1".into(),
+                round_id: "r1".into(),
+                tool_event: tool_event_data,
+            };
+            assert!(
+                agentic_event_to_dtos(&event).is_empty(),
+                "expected empty dtos for dropped tool event: {event:?}"
+            );
         }
     }
 }
