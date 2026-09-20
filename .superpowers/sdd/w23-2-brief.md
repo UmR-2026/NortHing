@@ -6,13 +6,13 @@ W23-2（防腐决策包 D3-② + ZCode C1 零成本部分；用户拍板 2026-09
 
 ## BASE
 
-`c544749`（main HEAD，工作树干净；派发时 task-gate 起点 = 本 brief 提交后的 docs commit）。
+BASE = 编排者派发正文给出的 7 位 SHA（brief 定版时的 main HEAD 以派发正文为准；其后不得再有非本单允许文件集的 commit，否则 task-gate 起点顺延）。
 
 ## 背景与 BASE 证据（ZCode 实测 + 编排者抽查验真）
 
 - **许愿注释**：`src/crates/contracts/events/src/agentic.rs:293`（UserSteeringInjected「The frontend renders this as a synthetic record」——前端不渲染）、`:307-308`（SessionModelAutoMigrated「The frontend should refresh its model selector…」——前端不做）。编排者已逐字验真。
 - **死变体**：`ImageAnalysisStarted/Completed` 全仓仅契约定义与自家辅助函数（agentic.rs:100,108），零发射零消费。
-- **隐形坟墓**：`src/crates/assembly/core/src/kernel_facade/events.rs:314` 尾部 `_ => vec![]` 静默丢弃 9 个事件（ZCode 清单：SessionCreated / SessionStateChanged / SessionDeleted / SessionTitleGenerated / ThreadGoalUpdated / UserSteeringInjected / DeepReviewQueueStateChanged / SessionModelAutoMigrated / ModelRoundCompleted）；内层 `ToolEventData` catch-all（events.rs:296 区域）丢弃 `Streaming` 子变体（state_manager.rs:186 有发射）。新增变体掉进 catch-all 无任何编译期信号。
+- **隐形坟墓**：`src/crates/assembly/core/src/kernel_facade/events.rs` 外层 match（`agentic_event_to_dtos`，函数在 :80）尾部 `_ => vec![]`（:314）静默丢弃 9 个事件（ZCode 清单：SessionCreated / SessionStateChanged / SessionDeleted / SessionTitleGenerated / ThreadGoalUpdated / UserSteeringInjected / DeepReviewQueueStateChanged / SessionModelAutoMigrated / ModelRoundCompleted；编排者已核实这 9 个在 events.rs 全文无匹配臂）；内层 `ToolEventData` catch-all（:296）丢弃 `Streaming` 子变体（发射点 = `src/crates/assembly/core/src/agentic/tools/pipeline/state_manager.rs:185-186`，注意仓内有两个 state_manager.rs，是 tools/pipeline 下那个）。**两个 enum（AgenticEvent / ToolEventData）均无 `#[non_exhaustive]`**（编排者已核实），故下游显式罗列后新增变体必报编译错误——本单核心机制成立。events.rs 已有 `use tracing::warn;`（:8），debug! 从同源导入。
 - 用户拍板口径：只修 UserSteeringInjected 的 UX（那是 W26 的事）；**本单只做诚实化，不接任何事件到界面**。
 
 ## 允许文件集
@@ -39,11 +39,11 @@ report 写 `.superpowers/sdd/w23-2-report.md`，不进验收 diff。
 - 禁改任何事件的发射/消费逻辑；禁动事件载荷字段；禁接 UX（W26）。
 - report 贴验证输出 + exit code；结尾状态词。
 
-## 验证（编排者已 BASE 预跑编译命令形态）
+## 验证（编排者已 BASE 预跑：命令形态全绿）
 
-1. `cargo check --workspace` → 绿（Rust 树与 CI 34374829227 全绿时等价 + W22 两单均已验证）。
-2. 新测试跑绿：`cargo test -p northhing-core --features product-full --lib <test_name>`（**必须带 feature**，feature 门后模块，裸跑假绿/编译死——W22 教训）。
-3. 既有映射测试不回归：同命令跑 `agentic_event_to_dtos` 前缀过滤，全绿。
+1. `cargo check --workspace`（`<RUSTUP> run stable-x86_64-pc-windows-msvc cargo check --workspace`）→ exit 0（BASE 实测绿；存量 warning 不影响，不要求清零）。
+2. 新测试跑绿：`cargo test -p northhing-core --features product-full --lib <test_name>`（**必须带 feature**，feature 门后模块，裸跑假绿/编译死——W22 教训）。新测试名由 implementer 定，report 贴全名。
+3. 既有映射测试不回归：`cargo test -p northhing-core --features product-full --lib agentic_event_to_dtos`（BASE 实测基线 = **13 passed; 0 failed; 1060 filtered out**，exit 0；实现后复跑须同绿或更绿，一个不许红）。
 4. report 附：显式臂完整清单（哪些变体现为显式丢弃）+ debug! 文案原文。
 
 ## 禁区
