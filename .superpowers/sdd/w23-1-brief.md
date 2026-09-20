@@ -6,7 +6,7 @@ W23-1（防腐决策包 A 组文档批；依据 = ZCode 外部审查 2026-09-09 
 
 ## BASE
 
-`0cac642`（main HEAD at dispatch time；brief 本体已随 `53eeae7` 提交，其后 `d02dc33`/`0cac642` 为 plan+handoff 两个 docs commit，task-gate 起点 = `0cac642`）。
+task-gate 起点 = 本 brief 定版后的 main HEAD（brief 定版 commit = `8de38f3` 之后的 BASE 行修订；**以编排者派发正文给出的 7 位 SHA 为准**，其后不得再有非本单允许文件集的 commit）。
 
 ## 背景与 BASE 证据（编排者已实测）
 
