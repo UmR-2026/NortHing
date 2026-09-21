@@ -74,3 +74,11 @@ BASE = `9222bbc42c2b0a13961dd8e63686c3c804abe698`。
 - 禁区：§4-S3 + 其它未列出文件。
 - commit 规则：点名 git add；前缀 `feat(desktop): W26-3`，body 注「用户 2026-09-09 拍板 P2-2 (a) 拒启动」；允许多 commit。
 - 并行声明：W26-1/2/4/5 同波全并行，文件集不相交。
+
+## Rust 工作约定（涉 Rust 任务必须遵守）
+
+1. 仓库根 AGENTS.md / 就近 AGENTS.md 是规范唯一事实源（六层分层、骨干不变量、i18n、日志、平台边界），优先于任何通用 Rust 惯例；Cargo.toml 的 edition/lints 维持现状，不许套模板。
+2. 遇编译错误（E0xxx）先用 skill 工具加载对应 skill（m01-ownership / m03-mutability / m04-zero-cost / m06-error-handling / m07-concurrency / unsafe-checker），trace 到设计层原因（谁该拥有这份数据？为什么跨线程？）再改代码——禁止无脑 .clone() / .unwrap() / Arc 包一切糊住编译器。
+3. 设计取舍（错误分层、生命周期、并发模型）可查 m09-m15 与 domain-* skill；完整路由见 rust-router skill。
+4. report 里写明：遇到的每个编译错误最终修在哪一层（机制层/设计层），一行一个。
+
