@@ -110,6 +110,7 @@ GitHub config and gate registry check failed:
 还原：`git checkout -- .github/workflows/ci.yml`，工作树干净。
 
 ### 5. Task-gate 校验
+- 实现提交 `5703a33` 校验：
 ```bash
 node scripts/verify-task-gate.mjs verify-attempt --base 77a508f8c9bafae564a7cd1dd11ca02c3a87fa72 --tip 5703a334b25012254abdc74457e27215ed0f8749 --allowlist .superpowers/sdd/w25-3-allowlist.txt
 ```
@@ -117,6 +118,16 @@ node scripts/verify-task-gate.mjs verify-attempt --base 77a508f8c9bafae564a7cd1d
 ```
 Warnings:
   - Unfulfilled allowlist entry (not modified): .superpowers/sdd/w25-3-report.md
+Attempt verification passed: all modified files are within allowlist.
+```
+退出码：0
+
+- 包含报告的最终提交 `a2b95b7` 校验：
+```bash
+node scripts/verify-task-gate.mjs verify-attempt --base 77a508f8c9bafae564a7cd1dd11ca02c3a87fa72 --tip a2b95b70e6a5f152c9dd124e259f183df78c26d3 --allowlist .superpowers/sdd/w25-3-allowlist.txt
+```
+输出：
+```
 Attempt verification passed: all modified files are within allowlist.
 ```
 退出码：0
