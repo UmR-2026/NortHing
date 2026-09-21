@@ -1,0 +1,5 @@
+src/apps/desktop/src/main.rs
+src/apps/desktop/src/single_instance.rs
+.superpowers/sdd/w26-3-brief.md
+.superpowers/sdd/w26-3-report.md
+.superpowers/sdd/w26-3-allowlist.txt

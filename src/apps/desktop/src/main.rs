@@ -6,6 +6,7 @@
 mod app_state;
 mod flags;
 mod mcp_adapter;
+mod single_instance;
 mod ui_dioxus;
 
 use anyhow::Result;
@@ -61,6 +62,15 @@ fn main() {
         .with_max_level(tracing::Level::INFO)
         .with_target(false)
         .init();
+
+    let _guard = match single_instance::try_acquire() {
+        Ok(guard) => guard,
+        Err(err) => {
+            eprintln!("NortHing desktop is already running in this session; refusing to start a second instance.");
+            tracing::error!(%err, "Single instance mutex acquisition failed");
+            std::process::exit(1);
+        }
+    };
 
     let (shutdown_tx, shutdown_rx) = mpsc::channel::<()>();
 
