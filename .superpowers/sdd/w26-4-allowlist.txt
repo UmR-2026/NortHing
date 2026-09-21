@@ -1,0 +1,4 @@
+src/crates/assembly/core/src/service/lsp/manager.rs
+.superpowers/sdd/w26-4-brief.md
+.superpowers/sdd/w26-4-report.md
+.superpowers/sdd/w26-4-allowlist.txt

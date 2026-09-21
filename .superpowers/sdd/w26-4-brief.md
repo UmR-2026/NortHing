@@ -19,7 +19,7 @@ ledger P2-18（tech-debt-ledger.md:211-216）：`uninstall_plugin` 无生产调�
 
 ## 2. 编排者预检结论（逐项钉死，直接采信）
 
-BASE = `434f9a4`。
+BASE = `cc586ae`。
 
 | 事实 | 证据 |
 |---|---|
@@ -55,8 +55,8 @@ BASE = `434f9a4`。
 2. `rustup run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full lsp` → 绿（manager 既有用例 :791-828 区全过）
 3. 行数证据：report 贴改动前后 countLines（可用 verify-rot-budget.mjs 输出或自数）
 4. `node scripts/check-repo-hygiene.mjs` → exit 0
-5. `node scripts/verify-rot-budget.mjs --base 434f9a4` → exit 0（god_file lsp/manager.rs 读数须 <836——净减实证）
-6. `node scripts/verify-task-gate.mjs verify-attempt --base 434f9a4 --tip <本单最后 commit sha> --allowlist .superpowers/sdd/w26-4-allowlist.txt` → exit 0（自建 allowlist 含自身；**窗口内若出现其它 W26 单文件，停手报编排者复跑**）
+5. `node scripts/verify-rot-budget.mjs --base cc586ae` → exit 0（god_file lsp/manager.rs 读数须 <836——净减实证）
+6. `node scripts/verify-task-gate.mjs verify-attempt --base cc586ae --tip <本单最后 commit sha> --allowlist .superpowers/sdd/w26-4-allowlist.txt` → exit 0（自建 allowlist 含自身；**窗口内若出现其它 W26 单文件，停手报编排者复跑**）
 
 ## 7. 报告
 
@@ -64,7 +64,7 @@ BASE = `434f9a4`。
 
 ## 8. 派发元信息
 
-- BASE: `434f9a4`
+- BASE: `cc586ae`
 - 允许文件集：
   - `src/crates/assembly/core/src/service/lsp/manager.rs`
   - `.superpowers/sdd/w26-4-brief.md` / `w26-4-report.md` / `w26-4-allowlist.txt`

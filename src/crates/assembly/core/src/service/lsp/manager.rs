@@ -100,6 +100,7 @@ impl LspManager {
     /// entry with files still on disk would otherwise be re-discovered and
     /// re-registered on the next `initialize`, silently resurrecting the
     /// plugin.
+    // reason: uninstall_plugin() is reserved for the upcoming plugin-management surface; today plugins are registered during initialize
     pub async fn uninstall_plugin(&self, plugin_id: &str) -> Result<()> {
         info!("Uninstalling plugin: {}", plugin_id);
 
@@ -124,13 +125,10 @@ impl LspManager {
             registry.unregister(plugin_id)?;
         }
 
-        // Step 2: stop servers. On failure, re-register (rollback step 1).
+        // Step 2: stop servers.
         for language in &plugin.languages {
-            if let Err(e) = self.stop_server(language).await {
-                warn!("Failed to stop server for language {}: {}", language, e);
-                self.rollback_registration(&plugin).await;
-                return Err(anyhow!("Failed to stop server for language {}: {}", language, e));
-            }
+            // stop_server intentionally never errors (warn-and-continue design).
+            let _ = self.stop_server(language).await;
         }
 
         // Step 3: delete files. On failure, re-register (rollback step 1).
@@ -301,9 +299,8 @@ impl LspManager {
         };
 
         for language in languages {
-            if let Err(e) = self.stop_server(&language).await {
-                error!("Failed to stop server {}: {}", language, e);
-            }
+            // stop_server intentionally never errors (warn-and-continue design).
+            let _ = self.stop_server(&language).await;
         }
 
         info!("All LSP servers stopped");
