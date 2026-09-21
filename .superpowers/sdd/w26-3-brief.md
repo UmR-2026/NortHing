@@ -19,7 +19,7 @@ ledger P2-2（tech-debt-ledger.md:98-103）症状：两实例共享 app.json 配
 
 ## 2. 编排者预检结论（逐项钉死，直接采信）
 
-BASE = `9222bbc42c2b0a13961dd8e63686c3c804abe698`。
+BASE = `434f9a4`。
 
 | 事实 | 证据 |
 |---|---|
@@ -58,7 +58,7 @@ BASE = `9222bbc42c2b0a13961dd8e63686c3c804abe698`。
 1. `rustup run stable-x86_64-pc-windows-msvc cargo test -p northhing single_instance` → 绿（真实 mutex 用例）
 2. `rustup run stable-x86_64-pc-windows-msvc cargo check -p northhing` → 0 error
 3. `node scripts/check-repo-hygiene.mjs` → exit 0
-4. `node scripts/verify-task-gate.mjs verify-attempt --base 9222bbc42c2b0a13961dd8e63686c3c804abe698 --tip <本单最后 commit sha> --allowlist .superpowers/sdd/w26-3-allowlist.txt` → exit 0（自建 allowlist 含自身；**窗口内若出现其它 W26 单文件，停手报编排者复跑**）
+4. `node scripts/verify-task-gate.mjs verify-attempt --base 434f9a4 --tip <本单最后 commit sha> --allowlist .superpowers/sdd/w26-3-allowlist.txt` → exit 0（自建 allowlist 含自身；**窗口内若出现其它 W26 单文件，停手报编排者复跑**）
 
 ## 7. 报告
 
@@ -66,7 +66,7 @@ BASE = `9222bbc42c2b0a13961dd8e63686c3c804abe698`。
 
 ## 8. 派发元信息
 
-- BASE: `9222bbc42c2b0a13961dd8e63686c3c804abe698`
+- BASE: `434f9a4`
 - 允许文件集：
   - `src/apps/desktop/src/main.rs`
   - `src/apps/desktop/src/single_instance.rs`（新建）
