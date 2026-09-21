@@ -11,7 +11,7 @@
    - 若返回 `Ok(guard)`，guard 绑定在 `main()` 顶层作用域（`let _guard = ...`），随进程生命周期持续持有，退出时自动 Drop 释放。
 
 2. **AC2/AC3 单实例锁实现（`single_instance.rs`）**：
-   - 新建 `src/apps/desktop/src/single_instance.rs`（190 行）。
+   - 新建 `src/apps/desktop/src/single_instance.rs`（181 行）。
    - 定义 `SingleInstanceError` 枚举（`AlreadyRunning`, `CreationFailed(u32)`, `InvalidName`）并实现 `Display` 与 `std::error::Error`。
    - 互斥体名钉死为 `Local\NorthHingDesktopSingleton`（AC3，会话命名空间）。
    - Win32 平台实现（`#[cfg(target_os = "windows")]`）：
@@ -97,3 +97,9 @@ Attempt verification passed: all modified files are within allowlist.
 ## 状态
 
 DONE
+
+## 审查后修订（minimax-m3，APPROVE_WITH_CONCERNS 后落实）
+
+- Minor-M1：`single_instance.rs:65-69` Sync SAFETY 注释补强（Drop 需 `&mut self` → `&` 共享访问无法触发 CloseHandle；handle 字段无 `&self` 访问器 → Sync 不会造成裸指针别名）。
+- Minor-M2：本报告行数订正 190 → 181（m3 指出的小错）。
+- 波级终审待办（AWC 遗留，owner: implementer / deadline: W26 收口 CI run）：CI 全 matrix 跑完后复跑 `cargo test -p northhing single_instance` 与 `cargo check -p northhing` 独立复证。

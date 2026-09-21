@@ -62,7 +62,9 @@ pub struct SingleInstanceGuard {
 unsafe impl Send for SingleInstanceGuard {}
 
 #[cfg(target_os = "windows")]
-// SAFETY: SingleInstanceGuard does not offer interior mutability or unsafe sharing.
+// SAFETY: Drop requires &mut self, so &shared access cannot trigger CloseHandle;
+// the handle field has no accessor via &self, so Sync cannot cause aliasing of
+// the raw pointer.
 unsafe impl Sync for SingleInstanceGuard {}
 
 #[cfg(target_os = "windows")]
