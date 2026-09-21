@@ -349,9 +349,9 @@ export function attestScanScope(policyPath, projectRoot = process.cwd()) {
 }
 
 export const EXPECTED_ROT_VERDICT_RUBRIC = {
-  healthy: '0 findings',
-  stable: '1-2 bounded findings',
-  rotting: '>=3 findings OR any unbounded',
+  clean: '0 violations, 0 warnings, 0 advisories',
+  'at-limit': '0 violations; warnings/advisories present (bounded, stable)',
+  degrading: '>=1 violation OR any unbounded',
 };
 
 export function attestVerdictRubric(policyPath, projectRoot = process.cwd()) {
@@ -371,7 +371,7 @@ export function attestVerdictRubric(policyPath, projectRoot = process.cwd()) {
     return { success: false, violations: ['workflow-policy.json is missing required "rotVerdictRubric" field'] };
   }
   if (typeof rubric !== 'object' || rubric === null || Array.isArray(rubric) || Object.keys(rubric).length !== 3) {
-    return { success: false, violations: ['workflow-policy.json "rotVerdictRubric" must be an object with exactly 3 keys: healthy, stable, rotting'] };
+    return { success: false, violations: ['workflow-policy.json "rotVerdictRubric" must be an object with exactly 3 keys: clean, at-limit, degrading'] };
   }
   for (const [key, expected] of Object.entries(EXPECTED_ROT_VERDICT_RUBRIC)) {
     if (typeof rubric[key] !== 'string') {
@@ -567,24 +567,17 @@ export function verifyRotBudget({
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   const violations = [];
   const warnings = [];
+  const advisories = [];
   const counts = {};
 
   const validation = validateManifest(manifest, projectRoot);
   if (!validation.success) {
     violations.push(...validation.errors);
     if (!silent) {
-      for (const violation of violations) {
-        console.error(violation);
-      }
+      for (const violation of violations) console.error(violation);
       console.error(`Rot budget verification failed with ${violations.length} violation(s).`);
     }
-    return {
-      success: false,
-      violations,
-      warnings,
-      counts,
-      checkedFilesCount: 0,
-    };
+    return { success: false, violations, warnings, advisories, counts, checkedFilesCount: 0 };
   }
 
   // Policy attestation
@@ -859,7 +852,7 @@ export function verifyRotBudget({
     }
   }
 
-  // Check zero headroom warnings for all registered manifest entries
+  // Check zero headroom advisories for all registered manifest entries
   for (const [key, entry] of Object.entries(manifest)) {
     let current;
     let fileRelPath = null;
@@ -878,26 +871,29 @@ export function verifyRotBudget({
           continue;
         }
       }
-      warnings.push(
-        `warn: ${key} has zero headroom (current ${current} == ceiling ${entry.ceiling}) — use exception lease channel`,
+      advisories.push(
+        `advisory: ${key} has zero headroom (current ${current} == ceiling ${entry.ceiling}) — use exception lease channel`,
       );
     }
   }
 
-  const findings = violations.length + warnings.length;
-  const verdictClass = (!unboundedState.hasUnbounded && findings === 0) ? 'healthy' : (!unboundedState.hasUnbounded && findings <= 2) ? 'stable' : 'rotting';
+  const verdictClass = (violations.length >= 1 || unboundedState.hasUnbounded)
+    ? 'degrading'
+    : (warnings.length + advisories.length > 0 ? 'at-limit' : 'clean');
+
   const verdict = {
     class: verdictClass,
-    findings,
+    violations: violations.length,
+    warnings: warnings.length,
+    advisories: advisories.length,
     unbounded: unboundedState.hasUnbounded,
   };
 
   const success = violations.length === 0;
 
   if (!silent) {
-    for (const warning of warnings) {
-      console.error(warning);
-    }
+    for (const warning of warnings) console.error(warning);
+    for (const advisory of advisories) console.error(advisory);
     if (success) {
       const grepReadings = grepRules.map((r) => `${r.key}=${r.count}/${r.ceiling}`).join(', ');
       const dirReadings = dirRules.map((r) => `${r.key}=${counts[r.key] ?? 0}/${r.ceiling}`).join(', ');
@@ -909,14 +905,12 @@ export function verifyRotBudget({
         .filter(Boolean)
         .join(', ');
       console.log(
-        `Rot budget verification passed (${readingsSummary} checked across ${allScannedFiles.length} files [src: ${srcFiles.length}, northing-installer/src-tauri: ${installerFiles.length}, scripts: ${scriptFiles.length}]) — verdict: ${verdict.class} (rubric SSOT: scripts/workflow-policy.json rotVerdictRubric).`,
+        `Rot budget verification passed (${readingsSummary} checked across ${allScannedFiles.length} files [src: ${srcFiles.length}, northing-installer/src-tauri: ${installerFiles.length}, scripts: ${scriptFiles.length}]) — verdict: ${verdict.class} (violations: ${violations.length}, warnings: ${warnings.length}, advisories: ${advisories.length}; rubric SSOT: scripts/workflow-policy.json rotVerdictRubric).`,
       );
     } else {
-      for (const violation of violations) {
-        console.error(violation);
-      }
+      for (const violation of violations) console.error(violation);
       console.error(
-        `Rot budget verification failed with ${violations.length} violation(s) — verdict: ${verdict.class} (rubric SSOT: scripts/workflow-policy.json rotVerdictRubric).`,
+        `Rot budget verification failed with ${violations.length} violation(s) — verdict: ${verdict.class} (violations: ${violations.length}, warnings: ${warnings.length}, advisories: ${advisories.length}; rubric SSOT: scripts/workflow-policy.json rotVerdictRubric).`,
       );
     }
   }
@@ -925,6 +919,7 @@ export function verifyRotBudget({
     success,
     violations,
     warnings,
+    advisories,
     counts,
     checkedFilesCount: allScannedFiles.length,
     verdict,

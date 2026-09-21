@@ -480,8 +480,8 @@ test('W18-6 F1.2: workflow policy with malformed rotVerdictRubric (missing key) 
         fileLinesRoots: ['src', 'northing-installer/src-tauri', 'scripts'],
       },
       rotVerdictRubric: {
-        healthy: '0 findings',
-        stable: '1-2 bounded findings',
+        clean: '0 violations, 0 warnings, 0 advisories',
+        'at-limit': '0 violations; warnings/advisories present (bounded, stable)',
       },
     };
     fs.writeFileSync(path.join(scriptsDir, 'workflow-policy.json'), JSON.stringify(policy, null, 2), 'utf8');
@@ -509,22 +509,22 @@ test('W18-6 F1.3: workflow policy rotVerdictRubric value mismatch with pinned li
         fileLinesRoots: ['src', 'northing-installer/src-tauri', 'scripts'],
       },
       rotVerdictRubric: {
-        healthy: '0 errors',
-        stable: '1-2 bounded findings',
-        rotting: '>=3 findings OR any unbounded',
+        clean: '0 errors',
+        'at-limit': '0 violations; warnings/advisories present (bounded, stable)',
+        degrading: '>=1 violation OR any unbounded',
       },
     };
     fs.writeFileSync(path.join(scriptsDir, 'workflow-policy.json'), JSON.stringify(policy, null, 2), 'utf8');
 
     const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
     assert.equal(result.success, false);
-    assert.ok(result.violations.some((v) => v.includes('rotVerdictRubric.healthy mismatch')));
+    assert.ok(result.violations.some((v) => v.includes('rotVerdictRubric.clean mismatch')));
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
 
-test('W18-6 F1.4: valid rubric with 0 findings passes and verdict is healthy', () => {
+test('W18-6 F1.4: valid rubric with 0 findings passes and verdict is clean', () => {
   const tmpDir = createFixtureDir();
   try {
     const scriptsDir = path.join(tmpDir, 'scripts');
@@ -539,9 +539,9 @@ test('W18-6 F1.4: valid rubric with 0 findings passes and verdict is healthy', (
         fileLinesRoots: ['src', 'northing-installer/src-tauri', 'scripts'],
       },
       rotVerdictRubric: {
-        healthy: '0 findings',
-        stable: '1-2 bounded findings',
-        rotting: '>=3 findings OR any unbounded',
+        clean: '0 violations, 0 warnings, 0 advisories',
+        'at-limit': '0 violations; warnings/advisories present (bounded, stable)',
+        degrading: '>=1 violation OR any unbounded',
       },
     };
     fs.writeFileSync(path.join(scriptsDir, 'workflow-policy.json'), JSON.stringify(policy, null, 2), 'utf8');
@@ -550,16 +550,19 @@ test('W18-6 F1.4: valid rubric with 0 findings passes and verdict is healthy', (
     assert.equal(result.success, true);
     assert.equal(result.violations.length, 0);
     assert.equal(result.warnings.length, 0);
+    assert.equal(result.advisories.length, 0);
     assert.ok(result.verdict);
-    assert.equal(result.verdict.class, 'healthy');
-    assert.equal(result.verdict.findings, 0);
+    assert.equal(result.verdict.class, 'clean');
+    assert.equal(result.verdict.violations, 0);
+    assert.equal(result.verdict.warnings, 0);
+    assert.equal(result.verdict.advisories, 0);
     assert.equal(result.verdict.unbounded, false);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
 
-test('W18-6 F1.5: 1 warning (bounded) passes with verdict stable', () => {
+test('W18-6 F1.5: 1 warning (bounded) passes with verdict at-limit', () => {
   const tmpDir = createFixtureDir();
   try {
     const scriptsDir = path.join(tmpDir, 'scripts');
@@ -577,9 +580,9 @@ test('W18-6 F1.5: 1 warning (bounded) passes with verdict stable', () => {
         fileLinesRoots: ['src', 'northing-installer/src-tauri', 'scripts'],
       },
       rotVerdictRubric: {
-        healthy: '0 findings',
-        stable: '1-2 bounded findings',
-        rotting: '>=3 findings OR any unbounded',
+        clean: '0 violations, 0 warnings, 0 advisories',
+        'at-limit': '0 violations; warnings/advisories present (bounded, stable)',
+        degrading: '>=1 violation OR any unbounded',
       },
     };
     fs.writeFileSync(path.join(scriptsDir, 'workflow-policy.json'), JSON.stringify(policy, null, 2), 'utf8');
@@ -588,24 +591,28 @@ test('W18-6 F1.5: 1 warning (bounded) passes with verdict stable', () => {
     assert.equal(result.success, true);
     assert.equal(result.violations.length, 0);
     assert.equal(result.warnings.length, 1);
+    assert.equal(result.advisories.length, 0);
     assert.ok(result.verdict);
-    assert.equal(result.verdict.class, 'stable');
-    assert.equal(result.verdict.findings, 1);
+    assert.equal(result.verdict.class, 'at-limit');
+    assert.equal(result.verdict.violations, 0);
+    assert.equal(result.verdict.warnings, 1);
+    assert.equal(result.verdict.advisories, 0);
     assert.equal(result.verdict.unbounded, false);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
 
-test('W18-6 F1.6: >=3 findings results in verdict rotting', () => {
+test('W18-6 F1.6: >=1 violation results in verdict degrading', () => {
   const tmpDir = createFixtureDir();
   try {
+    const srcDir = path.join(tmpDir, 'src');
     const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(srcDir, { recursive: true });
     fs.mkdirSync(scriptsDir, { recursive: true });
+    fs.writeFileSync(path.join(srcDir, 'violation.rs'), '// line 1\n// line 2\n', 'utf8');
     const manifest = {
-      'god_file:src/ghost1.rs': { kind: 'file-lines', ceiling: 500 },
-      'god_file:src/ghost2.rs': { kind: 'file-lines', ceiling: 500 },
-      'god_file:src/ghost3.rs': { kind: 'file-lines', ceiling: 500 },
+      'god_file:src/violation.rs': { kind: 'file-lines', ceiling: 1 },
     };
     fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
     const policy = {
@@ -614,26 +621,26 @@ test('W18-6 F1.6: >=3 findings results in verdict rotting', () => {
         fileLinesRoots: ['src', 'northing-installer/src-tauri', 'scripts'],
       },
       rotVerdictRubric: {
-        healthy: '0 findings',
-        stable: '1-2 bounded findings',
-        rotting: '>=3 findings OR any unbounded',
+        clean: '0 violations, 0 warnings, 0 advisories',
+        'at-limit': '0 violations; warnings/advisories present (bounded, stable)',
+        degrading: '>=1 violation OR any unbounded',
       },
     };
     fs.writeFileSync(path.join(scriptsDir, 'workflow-policy.json'), JSON.stringify(policy, null, 2), 'utf8');
 
     const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
-    assert.equal(result.success, true);
-    assert.equal(result.warnings.length, 3);
+    assert.equal(result.success, false);
+    assert.equal(result.violations.length, 1);
     assert.ok(result.verdict);
-    assert.equal(result.verdict.class, 'rotting');
-    assert.equal(result.verdict.findings, 3);
+    assert.equal(result.verdict.class, 'degrading');
+    assert.equal(result.verdict.violations, 1);
     assert.equal(result.verdict.unbounded, false);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
 
-test('W18-6 F1.7: unregistered file exceeding 800 lines results in verdict rotting (unbounded)', () => {
+test('W18-6 F1.7: unregistered file exceeding 800 lines results in verdict degrading (unbounded)', () => {
   const tmpDir = createFixtureDir();
   try {
     const srcDir = path.join(tmpDir, 'src');
@@ -651,9 +658,9 @@ test('W18-6 F1.7: unregistered file exceeding 800 lines results in verdict rotti
         fileLinesRoots: ['src', 'northing-installer/src-tauri', 'scripts'],
       },
       rotVerdictRubric: {
-        healthy: '0 findings',
-        stable: '1-2 bounded findings',
-        rotting: '>=3 findings OR any unbounded',
+        clean: '0 violations, 0 warnings, 0 advisories',
+        'at-limit': '0 violations; warnings/advisories present (bounded, stable)',
+        degrading: '>=1 violation OR any unbounded',
       },
     };
     fs.writeFileSync(path.join(scriptsDir, 'workflow-policy.json'), JSON.stringify(policy, null, 2), 'utf8');
@@ -661,7 +668,7 @@ test('W18-6 F1.7: unregistered file exceeding 800 lines results in verdict rotti
     const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
     assert.equal(result.success, false);
     assert.ok(result.verdict);
-    assert.equal(result.verdict.class, 'rotting');
+    assert.equal(result.verdict.class, 'degrading');
     assert.equal(result.verdict.unbounded, true);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -701,9 +708,9 @@ test('W18-6 F1.9: green path spawn stdout contains verdict segment', () => {
         fileLinesRoots: ['src', 'northing-installer/src-tauri', 'scripts'],
       },
       rotVerdictRubric: {
-        healthy: '0 findings',
-        stable: '1-2 bounded findings',
-        rotting: '>=3 findings OR any unbounded',
+        clean: '0 violations, 0 warnings, 0 advisories',
+        'at-limit': '0 violations; warnings/advisories present (bounded, stable)',
+        degrading: '>=1 violation OR any unbounded',
       },
     };
     fs.writeFileSync(path.join(scriptsDir, 'workflow-policy.json'), JSON.stringify(policy, null, 2), 'utf8');
@@ -715,7 +722,62 @@ test('W18-6 F1.9: green path spawn stdout contains verdict segment', () => {
     assert.equal(proc.status, 0);
     assert.match(
       proc.stdout,
-      /verdict: healthy \(rubric SSOT: scripts\/workflow-policy\.json rotVerdictRubric\)/,
+      /verdict: clean \(violations: 0, warnings: 0, advisories: 0; rubric SSOT: scripts\/workflow-policy\.json rotVerdictRubric\)/,
+    );
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W25-2: zero headroom produces advisory only and passes with verdict at-limit and exit 0', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const srcDir = path.join(tmpDir, 'src');
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    fs.writeFileSync(path.join(srcDir, 'test.rs'), 'line 1\nline 2\n', 'utf8');
+    const manifest = {
+      'god_file:src/test.rs': {
+        kind: 'file-lines',
+        ceiling: 2,
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    const policy = {
+      rotScanScope: {
+        grepRoots: ['src'],
+        fileLinesRoots: ['src', 'northing-installer/src-tauri', 'scripts'],
+      },
+      rotVerdictRubric: {
+        clean: '0 violations, 0 warnings, 0 advisories',
+        'at-limit': '0 violations; warnings/advisories present (bounded, stable)',
+        degrading: '>=1 violation OR any unbounded',
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'workflow-policy.json'), JSON.stringify(policy, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, true);
+    assert.equal(result.violations.length, 0);
+    assert.equal(result.warnings.length, 0);
+    assert.equal(result.advisories.length, 1);
+    assert.ok(result.advisories[0].includes('zero headroom'));
+    assert.ok(result.verdict);
+    assert.equal(result.verdict.class, 'at-limit');
+    assert.equal(result.verdict.violations, 0);
+    assert.equal(result.verdict.warnings, 0);
+    assert.equal(result.verdict.advisories, 1);
+    assert.equal(result.verdict.unbounded, false);
+
+    const proc = spawnSync(process.execPath, [SCRIPT_PATH], {
+      cwd: tmpDir,
+      encoding: 'utf8',
+    });
+    assert.equal(proc.status, 0);
+    assert.match(
+      proc.stdout,
+      /verdict: at-limit \(violations: 0, warnings: 0, advisories: 1; rubric SSOT: scripts\/workflow-policy\.json rotVerdictRubric\)/,
     );
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });

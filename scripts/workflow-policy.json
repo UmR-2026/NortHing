@@ -39,8 +39,8 @@
     "fileLinesRoots": ["src", "northing-installer/src-tauri", "scripts"]
   },
   "rotVerdictRubric": {
-    "healthy": "0 findings",
-    "stable": "1-2 bounded findings",
-    "rotting": ">=3 findings OR any unbounded"
+    "clean": "0 violations, 0 warnings, 0 advisories",
+    "at-limit": "0 violations; warnings/advisories present (bounded, stable)",
+    "degrading": ">=1 violation OR any unbounded"
   }
 }

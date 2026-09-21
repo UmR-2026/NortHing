@@ -544,7 +544,7 @@ export function runSelftestCases({ fixturesDir, repoRoot }) {
     const res = verifyRotBudget({ projectRoot: tmpZero, silent: true });
     const passed =
       res.success &&
-      res.warnings.some((w) => w.includes('let_underscore') && w.includes('zero headroom') && w.includes('exception lease'));
+      res.advisories.some((w) => w.includes('let_underscore') && w.includes('zero headroom') && w.includes('exception lease'));
     record('positive zero-headroom: warning emitted when current equals ceiling', passed, 'emits zero headroom warning and points to exception lease channel');
   } catch (err) {
     record('positive zero-headroom: warning emitted when current equals ceiling', false, `failed with exception: ${err.message}`);
@@ -889,7 +889,8 @@ export function runSelftestCases({ fixturesDir, repoRoot }) {
     const passed =
       res.success &&
       res.violations.length === 0 &&
-      !res.warnings.some((w) => w.includes('god_file:src/pinned.rs'));
+      !res.warnings.some((w) => w.includes('god_file:src/pinned.rs')) &&
+      !res.advisories.some((w) => w.includes('god_file:src/pinned.rs'));
     record('positive zero-headroom: warning suppressed by live lease', passed, 'suppresses zero headroom warning for file-lines entry with live lease');
   } catch (err) {
     record('positive zero-headroom: warning suppressed by live lease', false, `failed with exception: ${err.message}`);

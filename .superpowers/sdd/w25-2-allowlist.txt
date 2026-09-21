@@ -1,0 +1,7 @@
+scripts/workflow-policy.json
+scripts/verify-rot-budget.mjs
+scripts/verify-rot-budget.test.mjs
+scripts/fixtures/rot-budget/selftest-cases.test.mjs
+.superpowers/sdd/w25-2-brief.md
+.superpowers/sdd/w25-2-report.md
+.superpowers/sdd/w25-2-allowlist.txt
