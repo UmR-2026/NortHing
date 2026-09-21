@@ -1,0 +1,30 @@
+{
+  "base": "5faf69d19264e8d3130a8143c3de4b0b66e5d2fd",
+  "tip": "5004343c2d744938a1fe38ba3a7a2e4a44b88f11",
+  "allowlist": ".superpowers/sdd/w24-wave-allowlist.txt",
+  "allowlistSha256": "639d7ef17d7c56ccdc10616220107cb2bc79bae82900894e818de230ba64d815",
+  "allowlistBytes": 824,
+  "toolHashes": {
+    "assemble-review-package.mjs": "85eb443b1cd295ca75fe628921d6967b62ebece2d78b0b97d2ac0cf7338efe94",
+    "verify-task-gate.mjs": "35f11f64e33d664550addfc8b4f9564e2f1ee39a826283aa458c503aa1b9e2f6"
+  },
+  "diffSha256": "6b49e8667eefd70691d3cafbb936ce84b00fa8bfa77aa8c1f05ae92e261339d2",
+  "materials": {
+    "brief": {
+      "path": ".superpowers/sdd/plan-2026-09-10-w23-w26-closure-and-decoupling.md",
+      "sha256": "08a7522c589bbf69bfa728bba6b04024c4a388fd62c066168131e812995a01d1",
+      "bytes": 5781
+    },
+    "diff": {
+      "path": "E:\\agent-project\\northing\\.superpowers\\sdd\\review-packages\\w24-wave\\review.diff",
+      "sha256": "6b49e8667eefd70691d3cafbb936ce84b00fa8bfa77aa8c1f05ae92e261339d2",
+      "bytes": 207714
+    },
+    "report": {
+      "path": ".superpowers/sdd/w24-1-report.md",
+      "sha256": "e6c54ce6b32312db69a90de7a34cac847200b8ebae796a56f9e05d1b945a60ca",
+      "bytes": 14952
+    }
+  },
+  "assembledAt": "2026-09-21T09:12:38.622Z"
+}
