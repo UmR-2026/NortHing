@@ -1,0 +1,550 @@
+6503e72 feat(boundaries): W24-3 single-source layered table validation
+ .superpowers/sdd/w24-3-allowlist.txt           |   8 +
+ .superpowers/sdd/w24-3-brief.md                | 112 ++++++++++++++
+ AGENTS-CN.md                                   |   2 +-
+ scripts/core-boundaries/checker.mjs            |   5 +-
+ scripts/core-boundaries/layer-table.mjs        | 194 +++++++++++++++++++++++++
+ scripts/core-boundaries/rules/crate-layout.mjs |   7 +
+ scripts/core-boundaries/self-test.mjs          |  79 ++++++++++
+ 7 files changed, 405 insertions(+), 2 deletions(-)
+diff --git a/.superpowers/sdd/w24-3-allowlist.txt b/.superpowers/sdd/w24-3-allowlist.txt
+new file mode 100644
+index 0000000..f55c61f
+--- /dev/null
++++ b/.superpowers/sdd/w24-3-allowlist.txt
+@@ -0,0 +1,8 @@
++.superpowers/sdd/w24-3-allowlist.txt
++.superpowers/sdd/w24-3-brief.md
++.superpowers/sdd/w24-3-report.md
++AGENTS-CN.md
++scripts/core-boundaries/checker.mjs
++scripts/core-boundaries/layer-table.mjs
++scripts/core-boundaries/rules/crate-layout.mjs
++scripts/core-boundaries/self-test.mjs
+diff --git a/.superpowers/sdd/w24-3-brief.md b/.superpowers/sdd/w24-3-brief.md
+new file mode 100644
+index 0000000..7f464cf
+--- /dev/null
++++ b/.superpowers/sdd/w24-3-brief.md
+@@ -0,0 +1,112 @@
++# W24-3 Brief — 分层表单一源校验（crate-layout.mjs → AGENTS.md/CN 表校验，meta-ratchet 双 judge）
++
++## 1. 来源与验收标准（逐字）
++
++Plan `.superpowers/sdd/plan-2026-09-10-w23-w26-closure-and-decoupling.md` §1：
++> "W24-3 分层表单一源生成（crate-layout.mjs → AGENTS.md 表校验/生成）[双 judge；依赖 W23-1 表已修正]"
++
++防腐建议 3①（用户 2026-09-09 拍板采纳为 D3，`anti-rot-recommendations-2026-09-09.md`）：
++> "把知识做成被检查的工件：① 分层表从生成物变成源码（crate-layout.mjs 生成/校验 AGENTS.md 表格）"
++
++依赖状态：W23-1 已修正 AGENTS.md/CN 分层表（progress.md 台账 W23-1 行）——前置满足。
++
++范围解读（显式声明）：plan/D3① 字面为「AGENTS.md 表」，本单扩为 **EN+CN 双表**——依据 plan §1 W23-1 行「AGENTS.md/CN 分层表」先例与「W23-1 表已修正」依赖指向两表；CN layer-1 的 web-ui 残留系 W23-1 漏网项，不删则新校验一上线即红，本单一并收口（S5）为校验绿的前置。
++
++### 验收标准（机械可核对）
++
++- AC1: `scripts/core-boundaries/rules/crate-layout.mjs` 仍为唯一事实源：分层表期望值由其 `crateLayoutRules` + `crateLayoutLayerNames` + 新增的非 crate 补充数据推导，不在第二处复制 crate 清单。
++- AC2: 新文件 `scripts/core-boundaries/layer-table.mjs` 提供分层表校验：对 `AGENTS.md` 与 `AGENTS-CN.md` 的「Layered Module Index / 分层模块索引」表做结构校验（S2 规则全列）。
++- AC3: `scripts/core-boundaries/checker.mjs` 接线调用（diff ≤5 行），违规走既有 `failures[]` → `path:line` → exit 1 通道。
++- AC4: `scripts/core-boundaries/self-test.mjs` 增分层表自测（正例 + ≥2 反例），挂进既有 `northhing_BOUNDARY_CHECK_SELF_TEST=1` 门控块。
++- AC5: `AGENTS-CN.md` layer-1 行修正：删 `src/web-ui`（路径列）与 `Web UI`（模块列），与 SSOT 对齐。
++- AC6: §6 验证命令全绿，红态探针 fail-closed 实证，输出原文进 report。
++
++## 2. 编排者预检结论（逐项钉死，直接采信）
++
++BASE = `5faf69d19264e8d3130a8143c3de4b0b66e5d2fd`。
++
++| 事实 | 证据 |
++|---|---|
++| `node scripts/check-core-boundaries.mjs` / boundary self-test（env=1）/ hygiene / `verify-rot-budget.mjs --base HEAD~1` 在 BASE 全绿 | 编排者 BASE 实跑 exit 0（hygiene 绿基线 = 派发前工作树复测，编排者已复跑 exit 0） |
++| EN 表（AGENTS.md `## Layered Module Index`）7 行内容与 crate-layout.mjs 推导值一致（见下「推导对照」） | 编排者逐行比对 |
++| CN 表（AGENTS-CN.md `## 分层模块索引`）仅 layer-1 行发散：路径列多 `src/web-ui`、模块列多 `Web UI`；row 2-7 与 EN 一致 | 同上 |
++| v0.1.0 权威口径：骨干不变量「only Dioxus consult-room desktop + northing-installer are shipping surfaces」；AGENTS.md 全文对 web-ui 一律标 `[missing: src/web-ui]`——故以 EN 表为准、CN 为待修 | AGENTS.md backbone invariants |
++| crateName↔目录名不一致两处：`agent-tools` 住 `tool-contracts`、`tool-runtime` 住 `tool-execution`——表列的是目录名，推导时取 path 末段 | crate-layout.mjs:14,16 |
++| 层序约定：`crateLayoutLayerNames` 数组序 = 表行序（interfaces=1 … support=7） | crate-layout.mjs:35-43 vs 两表 |
++| checker.mjs 主线从 :967 起（`checkCrateLayoutRules(); checkCrateSurfaceRegistration();` …），failures 聚合、:1021-1027 统一打印+exit 1 | 源码 |
++| self-test 门控：checker.mjs:935 `process.env.northhing_BOUNDARY_CHECK_SELF_TEST === '1'` 块内调 `runManifestParserSelfTest({...})` | 源码 |
++| `scripts/core-boundaries/` 子目录文件**不计** `dir_entries:scripts` 配额（只数顶层文件），也**不在** god-file 扫描的 18 个 scripts 文件内——本单零配额成本 | rot 输出 "scripts: 18" + verify-rot-budget.mjs:830 口径 |
++| CI 接线免费：core-boundaries job 已在 CI（ci.yml:125-136）；self-test 的 CI 接线是 W24-1 领地（本单不碰 ci.yml） | ci.yml |
++| AGENTS-CN.md 为 UTF-8；只许用 edit 工具做单点修改（禁 PowerShell Set-Content——GBK 双重编码事故史） | 编排者纪律 |
++
++推导对照（SSOT 推导值 = 各层 path 末段 crate 名 + 非 crate 补充）：
++- layer 1 interfaces：paths = [`src/apps/*`, `northing-installer`, `tests/e2e`, `src/crates/interfaces`]；entries = [desktop, CLI, server, installer, E2E]（非 crate 补充）+ [acp]（crate 推导）
++- layer 2 assembly：paths = [`src/crates/assembly`]；entries = [core, product-capabilities]
++- layer 3 adapters：paths = [`src/crates/adapters`]；entries = [ai-adapters]
++- layer 4 services：paths = [`src/crates/services`]；entries = [services-core, services-integrations, terminal, debug-log]
++- layer 5 execution：paths = [`src/crates/execution`]；entries = [agent-dispatch, agent-runtime, agent-stream, tool-contracts, runtime-services, tool-execution]
++- layer 6 contracts：paths = [`src/crates/contracts`]；entries = [core-types, events, runtime-ports, product-domains, kernel-api, disposable]
++- layer 7 support：paths = [`src/crates/support`]；entries = [test-support, cli-internal]
++
++## 3. 复用侦察（强制）
++
++- crate 清单推导必须复用既有 `crateLayoutRules`/`crateLayoutLayerNames`（crate-layout.mjs），禁止在 layer-table.mjs 里复制第二份 crate 名单。
++- failures 上报复用 checker.mjs 既有 `failures.push({path, line, message})` 形状与 `toRepoPath`。
++- report 必须有「复用侦察」一节。无此节 = 未完成。
++
++## 4. Spec（必须全部满足）
++
++- S1: crate-layout.mjs 追加导出 `layerTableNonCrate`：形如 `{ interfaces: { paths: ['src/apps/*', 'northing-installer', 'tests/e2e'], entries: ['desktop', 'CLI', 'server', 'installer', 'E2E'] } }` 的补充映射（仅 layer 1 有非 crate 内容；其余层可不出现）。不动既有 export 的形状与内容。
++- S2: 新建 `scripts/core-boundaries/layer-table.mjs`，导出：
++  - `expectedLayerRows()`：由 crateLayoutRules + crateLayoutLayerNames + layerTableNonCrate 推导 7 层期望（index、paths 集合、entries 集合）。推导公式钉死：**层 paths = { 该层各 crate path 去末段（dirname）} ∪ (layerTableNonCrate[layer]?.paths ?? ∅)；层 entries = { 该层各 crate path 末段 } ∪ (layerTableNonCrate[layer]?.entries ?? ∅)**。`layerTableNonCrate` 不得包含可由 crate path 推导出的路径（`src/crates/<layer>` 形态）——违者即违反 AC1 单一源。
++  - `parseLayerTable(markdown, heading)`：纯函数，抽出指定 heading 到下一 heading 间的 markdown 表数据行，返回每行 `#` / path 列集合 / 模块列集合。归一化：去反引号、按 `,` 或 `、` 切分、trim。
++  - `checkLayerTables(root, failures)`：对 AGENTS.md（heading `## Layered Module Index`）与 AGENTS-CN.md（heading `## 分层模块索引`）执行校验，违规 push 进 failures——**push 绝对路径（`join(root, 'AGENTS.md')`），与既有惯例一致（checker.mjs:50-51），经 `toRepoPath` 输出为仓库相对路径**；`line` 用表行实际行号。校验规则：
++    - R1: 表存在且恰好 7 个数据行。
++    - R2: 行 i 的 `#` 列 == i（1..7）。
++    - R3: 行 i 的 paths 集合 == expectedLayerRows()[i-1].paths（集合相等，不计序）。
++    - R4: 行 i 的模块集合 == expectedLayerRows()[i-1].entries（集合相等）。
++    -  prose 列（层名 / Owns / Layer doc）**不校验**——本单只做结构列（显式声明的范围裁剪）。
++- S3: checker.mjs 接线：import + 在 `checkCrateSurfaceRegistration();` 后插一行 `checkLayerTables(ROOT, failures);`（diff ≤5 行；self-test 门控块内另加一行调用 runLayerTableSelfTest，见 S4）。
++- S4: self-test.mjs 增导出 `runLayerTableSelfTest({ parseLayerTable, expectedLayerRows })`：正例 = 当前 EN 表内容（可内联合成等效 markdown）通过；反例 ≥2：(a) 删一个模块条目 → 检出违规；(b) 交换两行 → 检出违规。挂进 checker.mjs:935 既有 env 门控块（+1 行调用 + import 参数透传）。
++- S5: AGENTS-CN.md layer-1 行：路径列删 `、`src/web-ui``、模块列删 `、Web UI`（单行 edit，其余不动）。
++- S6: 禁区：不改 `AGENTS.md` 表（已正确——若发现 EN 表与 crate-layout 现状不符，报 BLOCKED 不自行改）；不改 `.github/workflows/ci.yml`（W24-1 领地）；不改 `check-core-boundaries.mjs` shim。
++
++## 5. Global Constraints（逐字遵守）
++
++- 纯校验，不建「生成」通道（生成留将来；反建议精神：最小机械检查先接线）。
++- 不新增顶层 `scripts/` 文件（新模块进 `scripts/core-boundaries/`）。
++- 输出/日志英文，无 emoji。
++- 禁整树 git 操作；只点名 add/commit。
++- 测试必须真实执行，report 贴输出原文。
++- AGENTS-CN.md 只用 edit 工具改，禁 Set-Content/重编码。
++
++## 6. 验证（命令 + 输出原文进 report）
++
++1. `node scripts/check-core-boundaries.mjs` → exit 0（两表校验通过）
++2. `$env:northhing_BOUNDARY_CHECK_SELF_TEST='1'; node scripts/check-core-boundaries.mjs` → exit 0（含新自测）
++3. `node scripts/check-repo-hygiene.mjs` → exit 0
++4. `node scripts/verify-rot-budget.mjs --base 5faf69d19264e8d3130a8143c3de4b0b66e5d2fd` → exit 0
++5. 红态探针（fail-closed 实证；**在本单 commit 之后执行**，保证 `git checkout --` 可还原）：
++   a. 临时从 AGENTS.md layer-5 行模块列删 `tool-contracts` → `node scripts/check-core-boundaries.mjs` exit 1 → `git checkout -- AGENTS.md` 还原；
++   b. 临时把 AGENTS-CN.md 第 3/4 行数据行互换 → exit 1 → `git checkout -- AGENTS-CN.md` 还原。
++   输出原文进 report（注意：探针 b 后必须先还原再继续）。
++6. `node scripts/verify-task-gate.mjs verify-attempt --base 5faf69d19264e8d3130a8143c3de4b0b66e5d2fd --tip <本单最后一个 commit sha> --allowlist .superpowers/sdd/w24-3-allowlist.txt` → exit 0（先自建 allowlist，含其自身；commit 后用真实 tip sha 替换占位。**若 diff 窗口内出现 W24-1 文件（scripts/gate-registry.json、ci.yml、package.json 等），停手报编排者复跑，不得私扩 allowlist**）
++
++## 7. 报告
++
++路径 `.superpowers/sdd/w24-3-report.md`。章节：改动摘要 / 复用侦察 / 验证（命令+输出原文）/ 疑虑 / 状态（DONE / DONE_WITH_CONCERNS / NEEDS_CONTEXT / BLOCKED）。
++
++## 8. 派发元信息
++
++- BASE: `5faf69d19264e8d3130a8143c3de4b0b66e5d2fd`
++- 允许文件集（diff 越出即 judge Critical）：
++  - `scripts/core-boundaries/rules/crate-layout.mjs`
++  - `scripts/core-boundaries/layer-table.mjs`（新建）
++  - `scripts/core-boundaries/checker.mjs`
++  - `scripts/core-boundaries/self-test.mjs`
++  - `AGENTS-CN.md`
++  - `.superpowers/sdd/w24-3-brief.md` / `w24-3-report.md` / `w24-3-allowlist.txt`
++- 禁区：§4-S6 所列 + 其它未列出文件。
++- commit 规则：点名 git add；message 前缀 `feat(boundaries): W24-3` 或 `docs: W24-3`，body 注「用户 2026-09-09 拍板 D3① 签名」；允许多 commit。
++- 并行声明：W24-1 同波并行，其文件集（scripts/gate-registry.json、check-github-config.mjs、ci.yml、package.json、pnpm-lock.yaml、desktop-tauri-build.mjs 删除）与本单不相交；不得触碰。cargo 本单不需要运行。
++- 双 judge 依据：plan §2 指定（W24-3 为 meta-ratchet 单，边界检查基础设施视同信任根）；本单允许文件集与 workflow-policy.json metaRatchetPaths 零交集，非机械触发。
+diff --git a/AGENTS-CN.md b/AGENTS-CN.md
+index 3da31eb..5b4c6cd 100644
+--- a/AGENTS-CN.md
++++ b/AGENTS-CN.md
+@@ -12,21 +12,21 @@ northhing 是一个 Rust 工作区加上 React 前端的组合。
+ 2. 进行桌面开发时，优先使用 `pnpm run desktop:dev` —— 它构建并运行 Dioxus 诊室桌面应用（冷启动，无 HMR）。使用 `pnpm run desktop:check` 进行更快的纯编译验证。
+ 3. 修改 Rust 文件后，优先使用 `pnpm run fmt:rs` 只格式化新增或暂存的 `.rs` 文件。仅当你有意希望扩大格式化覆盖范围时，才使用 `cargo fmt`。
+ 4. 修改完成后，从下表中选择最小匹配的验证命令运行。
+ 
+ ## 分层模块索引
+ 
+ 依赖关系自上而下流动。每层只能依赖更低的层；各层内的 crate 依赖要保持到所需的最小集合。
+ 
+ | # | 层 | 路径 | 职责 | 模块 / 入口 | 层文档 |
+ |---|---|---|---|---|---|
+-| 1 | 接口与入口 | `src/apps/*`、`src/web-ui`、`northing-installer`、`tests/e2e`、`src/crates/interfaces` | 产品宿主、命令、UI 入口、协议接口以及跨表面测试 | desktop、CLI、server、Web UI、installer、E2E、`acp` | 最近本地 `AGENTS.md`；[interfaces](src/crates/interfaces/AGENTS.md) |
++| 1 | 接口与入口 | `src/apps/*`、`northing-installer`、`tests/e2e`、`src/crates/interfaces` | 产品宿主、命令、UI 入口、协议接口以及跨表面测试 | desktop、CLI、server、installer、E2E、`acp` | 最近本地 `AGENTS.md`；[interfaces](src/crates/interfaces/AGENTS.md) |
+ | 2 | 产品装配 | `src/crates/assembly` | 兼容性导出、产品能力选择、product-full 装配以及适配器/服务注册 | `core`、`product-capabilities` | [AGENTS.md](src/crates/assembly/AGENTS.md) |
+ | 3 | 适配器 | `src/crates/adapters` | AI 协议适配器与外部提供方翻译 | `ai-adapters` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
+ | 4 | 服务 | `src/crates/services` | 可复用的 OS、文件系统、终端、MCP、远程、git、watch、进程、会话持久化原语以及网络实现 | `services-core`、`services-integrations`、`terminal`、`debug-log` | [AGENTS.md](src/crates/services/AGENTS.md) |
+ | 5 | 执行原语 | `src/crates/execution` | 可移植的 agent、stream、DeepReview 策略/报告、typed-service、tool-contract 以及 tool-execution 构件 | `agent-dispatch`、`agent-runtime`、`agent-stream`、`tool-contracts`、`runtime-services`、`tool-execution` | [AGENTS.md](src/crates/execution/AGENTS.md) |
+ | 6 | 稳定契约与产品域 | `src/crates/contracts` | 共享 DTO、事件形态、运行时端口以及产品域契约/策略 | `core-types`、`events`、`runtime-ports`、`product-domains`、`kernel-api`、`disposable` | [AGENTS.md](src/crates/contracts/AGENTS.md) |
+ | 7 | 支持 | `src/crates/support` | 测试支撑与内部工具（豁免生产分层约束的辅助 crate） | `test-support`、`cli-internal` | 无（无就近 `AGENTS.md`） |
+ 
+ 机械对照：以根 `Cargo.toml` workspace members + `scripts/core-boundaries/rules/crate-layout.mjs` 为准。
+ 
+ 边界规则：
+diff --git a/scripts/core-boundaries/checker.mjs b/scripts/core-boundaries/checker.mjs
+index 9f54381..1c86837 100644
+--- a/scripts/core-boundaries/checker.mjs
++++ b/scripts/core-boundaries/checker.mjs
+@@ -19,21 +19,22 @@ import {
+   ownerCrateFeatureAssemblyRules,
+   productCoreFeatureAssemblyRules,
+   productCoreFeatureAssemblyScanRoots,
+ } from './rules/feature-rules.mjs';
+ import {
+   facadeOnlyFiles,
+   forbiddenContentRules,
+   forbiddenContentUnderRules,
+   requiredContentRules,
+ } from './rules/source-rules.mjs';
+-import { runManifestParserSelfTest } from './self-test.mjs';
++import { runLayerTableSelfTest, runManifestParserSelfTest } from './self-test.mjs';
++import { checkLayerTables, expectedLayerRows, parseLayerTable } from './layer-table.mjs';
+ 
+ const __dirname = dirname(fileURLToPath(import.meta.url));
+ const ROOT = join(__dirname, '..', '..');
+ const failures = [];
+ 
+ function toRepoPath(path) {
+   return relative(ROOT, path).replace(/\\/g, '/');
+ }
+ 
+ function readText(path) {
+@@ -953,26 +954,28 @@ export function runCoreBoundaryCheck() {
+       facadeOnlyFiles,
+       forbiddenRuleTextForPath,
+       forbiddenUnderRuleTextForPath,
+       regexSourceContainsContract,
+       createFacadeLineChecker,
+       escapeRegex,
+       checkCrateSurfaceRegistration,
+       surfacesExemptMembers,
+       ROOT,
+     });
++    runLayerTableSelfTest({ parseLayerTable, expectedLayerRows });
+     console.log('Core boundary check self-test passed.');
+     return;
+   }
+ 
+   checkCrateLayoutRules();
+   checkCrateSurfaceRegistration();
++  checkLayerTables(ROOT, failures);
+ 
+   for (const crateName of noCoreDependencyCrates) {
+     const crateDir = crateDirForName(crateName);
+     checkCargoManifest(crateDir);
+     checkRustImports(crateDir);
+   }
+ 
+   for (const rule of lightweightBoundaryRules) {
+     const crateDir = crateDirForName(rule.crateName);
+     const messageForDep = (dep) => `${rule.reason}; forbidden dependency: ${dep}`;
+diff --git a/scripts/core-boundaries/layer-table.mjs b/scripts/core-boundaries/layer-table.mjs
+new file mode 100644
+index 0000000..bc491aa
+--- /dev/null
++++ b/scripts/core-boundaries/layer-table.mjs
+@@ -0,0 +1,194 @@
++import { existsSync, readFileSync } from 'fs';
++import { join } from 'path';
++
++import {
++  crateLayoutLayerNames,
++  crateLayoutRules,
++  layerTableNonCrate,
++} from './rules/crate-layout.mjs';
++
++export function expectedLayerRows() {
++  return crateLayoutLayerNames.map((layerName, i) => {
++    const rules = crateLayoutRules.filter((r) => r.layer === layerName);
++
++    const crateDirnames = rules.map((r) => r.path.slice(0, r.path.lastIndexOf('/')));
++    const nonCratePaths = layerTableNonCrate[layerName]?.paths ?? [];
++    const paths = new Set([...crateDirnames, ...nonCratePaths]);
++
++    const crateBasenames = rules.map((r) => r.path.slice(r.path.lastIndexOf('/') + 1));
++    const nonCrateEntries = layerTableNonCrate[layerName]?.entries ?? [];
++    const entries = new Set([...crateBasenames, ...nonCrateEntries]);
++
++    return {
++      layer: layerName,
++      index: i + 1,
++      paths,
++      entries,
++    };
++  });
++}
++
++export function areSetsEqual(a, b) {
++  if (a.size !== b.size) return false;
++  for (const item of a) {
++    if (!b.has(item)) return false;
++  }
++  return true;
++}
++
++export function parseLayerTable(markdown, heading) {
++  const lines = markdown.split(/\r?\n/);
++  const headingTrimmed = heading.trim();
++
++  let headingLineIndex = -1;
++  for (let i = 0; i < lines.length; i++) {
++    if (lines[i].trim() === headingTrimmed) {
++      headingLineIndex = i;
++      break;
++    }
++  }
++
++  if (headingLineIndex === -1) {
++    return null;
++  }
++
++  const rows = [];
++  rows.headingLine = headingLineIndex + 1;
++
++  for (let i = headingLineIndex + 1; i < lines.length; i++) {
++    const rawLine = lines[i];
++    const trimmed = rawLine.trim();
++
++    // Stop if a new markdown heading begins
++    if (/^#{1,6}\s/.test(trimmed)) {
++      break;
++    }
++
++    if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) {
++      continue;
++    }
++
++    // Skip separator / delimiter rows like |---|---|
++    if (/^\|[\s\-:|]+\|$/.test(trimmed)) {
++      continue;
++    }
++
++    const cells = trimmed.split('|').slice(1, -1).map((c) => c.trim());
++    if (cells.length < 5) {
++      continue;
++    }
++
++    // Skip header row
++    if (cells[0] === '#') {
++      continue;
++    }
++
++    const rawIndex = cells[0];
++    const index = parseInt(rawIndex, 10);
++
++    const paths = new Set(
++      cells[2]
++        .replace(/`/g, '')
++        .split(/[,、]/)
++        .map((s) => s.trim())
++        .filter(Boolean)
++    );
++
++    const entries = new Set(
++      cells[4]
++        .replace(/`/g, '')
++        .split(/[,、]/)
++        .map((s) => s.trim())
++        .filter(Boolean)
++    );
++
++    rows.push({
++      index,
++      rawIndex,
++      paths,
++      entries,
++      line: i + 1,
++    });
++  }
++
++  return rows;
++}
++
++export function checkLayerTables(root, failures) {
++  const expected = expectedLayerRows();
++  const targets = [
++    { file: 'AGENTS.md', heading: '## Layered Module Index' },
++    { file: 'AGENTS-CN.md', heading: '## 分层模块索引' },
++  ];
++
++  for (const target of targets) {
++    const filePath = join(root, target.file);
++    if (!existsSync(filePath)) {
++      failures.push({
++        path: filePath,
++        line: 1,
++        message: `file not found`,
++      });
++      continue;
++    }
++
++    const content = readFileSync(filePath, 'utf8');
++    const rows = parseLayerTable(content, target.heading);
++
++    if (!rows) {
++      failures.push({
++        path: filePath,
++        line: 1,
++        message: `layered module index table not found under heading "${target.heading}"`,
++      });
++      continue;
++    }
++
++    if (rows.length !== 7) {
++      failures.push({
++        path: filePath,
++        line: rows.headingLine ?? 1,
++        message: `expected 7 data rows in layered module index table, found ${rows.length}`,
++      });
++    }
++
++    const checkCount = Math.min(rows.length, 7);
++    for (let i = 0; i < checkCount; i++) {
++      const row = rows[i];
++      const exp = expected[i];
++      const expectedIndex = i + 1;
++
++      if (row.index !== expectedIndex) {
++        failures.push({
++          path: filePath,
++          line: row.line,
++          message: `row ${expectedIndex}: expected index ${expectedIndex}, found ${row.rawIndex || row.index}`,
++        });
++      }
++
++      if (!areSetsEqual(row.paths, exp.paths)) {
++        failures.push({
++          path: filePath,
++          line: row.line,
++          message: `row ${expectedIndex} (${exp.layer}): path mismatch: expected [${[...exp.paths].sort().join(', ')}], found [${[...row.paths].sort().join(', ')}]`,
++        });
++      }
++
++      if (!areSetsEqual(row.entries, exp.entries)) {
++        failures.push({
++          path: filePath,
++          line: row.line,
++          message: `row ${expectedIndex} (${exp.layer}): modules mismatch: expected [${[...exp.entries].sort().join(', ')}], found [${[...row.entries].sort().join(', ')}]`,
++        });
++      }
++    }
++
++    for (let i = checkCount; i < 7; i++) {
++      failures.push({
++        path: filePath,
++        line: rows.headingLine ?? 1,
++        message: `row ${i + 1} (${expected[i].layer}) is missing from layered module index table`,
++      });
++    }
++  }
++}
+diff --git a/scripts/core-boundaries/rules/crate-layout.mjs b/scripts/core-boundaries/rules/crate-layout.mjs
+index 98605f5..a421a44 100644
+--- a/scripts/core-boundaries/rules/crate-layout.mjs
++++ b/scripts/core-boundaries/rules/crate-layout.mjs
+@@ -35,19 +35,26 @@ export const crateLayoutRules = [
+ export const crateLayoutLayerNames = [
+   'interfaces',
+   'assembly',
+   'adapters',
+   'services',
+   'execution',
+   'contracts',
+   'support',
+ ];
+ 
++export const layerTableNonCrate = {
++  interfaces: {
++    paths: ['src/apps/*', 'northing-installer', 'tests/e2e'],
++    entries: ['desktop', 'CLI', 'server', 'installer', 'E2E'],
++  },
++};
++
+ const crateLayoutByName = new Map(crateLayoutRules.map((rule) => [rule.crateName, rule]));
+ 
+ export function crateLayoutRuleForName(crateName) {
+   return crateLayoutByName.get(crateName);
+ }
+ 
+ export function cratePathForName(crateName) {
+   return crateLayoutRuleForName(crateName)?.path;
+ }
+diff --git a/scripts/core-boundaries/self-test.mjs b/scripts/core-boundaries/self-test.mjs
+index 2cf1bf7..ae91883 100644
+--- a/scripts/core-boundaries/self-test.mjs
++++ b/scripts/core-boundaries/self-test.mjs
+@@ -2729,10 +2729,89 @@ export function runManifestParserSelfTest({
+     projectRoot: ROOT,
+     recordFailure: (f) => prefixCollisionFailures.push(f),
+   });
+   if (
+     prefixCollisionFailures.length !== 1 ||
+     !prefixCollisionFailures[0].message.includes('src/apps/desktop-unknown')
+   ) {
+     throw new Error('crate surface registration guard falsely matched prefix-similar unregistered crate');
+   }
+ }
++
++function areSetsEqualForTest(a, b) {
++  if (!a || !b || a.size !== b.size) return false;
++  for (const item of a) {
++    if (!b.has(item)) return false;
++  }
++  return true;
++}
++
++function validateLayerTableRows(rows, expected) {
++  const errors = [];
++  if (!rows || rows.length !== 7) {
++    errors.push(`expected 7 rows, got ${rows ? rows.length : 0}`);
++    return errors;
++  }
++  for (let i = 0; i < 7; i++) {
++    const row = rows[i];
++    const exp = expected[i];
++    if (row.index !== i + 1) {
++      errors.push(`row ${i + 1}: expected index ${i + 1}, found ${row.index}`);
++    }
++    if (!areSetsEqualForTest(row.paths, exp.paths)) {
++      errors.push(`row ${i + 1}: paths mismatch`);
++    }
++    if (!areSetsEqualForTest(row.entries, exp.entries)) {
++      errors.push(`row ${i + 1}: entries mismatch`);
++    }
++  }
++  return errors;
++}
++
++export function runLayerTableSelfTest({ parseLayerTable, expectedLayerRows }) {
++  const expected = expectedLayerRows();
++
++  // Positive case: valid markdown matching current EN table
++  const positiveMarkdown = `
++## Layered Module Index
++
++| # | Layer | Path | Owns | Modules / entries | Layer doc |
++|---|---|---|---|---|---|
++| 1 | Interfaces and entrypoints | \`src/apps/*\`, \`northing-installer\`, \`tests/e2e\`, \`src/crates/interfaces\` | Hosts | desktop, CLI, server, installer, E2E, \`acp\` | [interfaces](src/crates/interfaces/AGENTS.md) |
++| 2 | Product assembly | \`src/crates/assembly\` | Assembly | \`core\`, \`product-capabilities\` | [assembly](src/crates/assembly/AGENTS.md) |
++| 3 | Adapters | \`src/crates/adapters\` | Adapters | \`ai-adapters\` | [adapters](src/crates/adapters/AGENTS.md) |
++| 4 | Services | \`src/crates/services\` | Services | \`services-core\`, \`services-integrations\`, \`terminal\`, \`debug-log\` | [services](src/crates/services/AGENTS.md) |
++| 5 | Execution primitives | \`src/crates/execution\` | Execution | \`agent-dispatch\`, \`agent-runtime\`, \`agent-stream\`, \`tool-contracts\`, \`runtime-services\`, \`tool-execution\` | [execution](src/crates/execution/AGENTS.md) |
++| 6 | Stable contracts and product domains | \`src/crates/contracts\` | Contracts | \`core-types\`, \`events\`, \`runtime-ports\`, \`product-domains\`, \`kernel-api\`, \`disposable\` | [contracts](src/crates/contracts/AGENTS.md) |
++| 7 | Support | \`src/crates/support\` | Support | \`test-support\`, \`cli-internal\` | none |
++
++## Next Section
++`;
++
++  const positiveRows = parseLayerTable(positiveMarkdown, '## Layered Module Index');
++  const posErrors = validateLayerTableRows(positiveRows, expected);
++  if (posErrors.length !== 0) {
++    throw new Error(`layer table self-test positive case failed: ${posErrors.join(', ')}`);
++  }
++
++  // Negative case (a): deleted a module entry (e.g. tool-contracts from layer 5)
++  const negMarkdownA = positiveMarkdown.replace('`tool-contracts`, ', '');
++  const negRowsA = parseLayerTable(negMarkdownA, '## Layered Module Index');
++  const negErrorsA = validateLayerTableRows(negRowsA, expected);
++  if (negErrorsA.length === 0 || !negErrorsA.some((e) => e.includes('row 5') && e.includes('entries mismatch'))) {
++    throw new Error('layer table self-test negative case (deleted module entry) was not flagged');
++  }
++
++  // Negative case (b): swapped two rows (e.g. row 3 and row 4 swapped)
++  const lines = positiveMarkdown.split('\n');
++  const row3Idx = lines.findIndex((l) => l.startsWith('| 3 |'));
++  const row4Idx = lines.findIndex((l) => l.startsWith('| 4 |'));
++  const temp = lines[row3Idx];
++  lines[row3Idx] = lines[row4Idx];
++  lines[row4Idx] = temp;
++  const negMarkdownB = lines.join('\n');
++  const negRowsB = parseLayerTable(negMarkdownB, '## Layered Module Index');
++  const negErrorsB = validateLayerTableRows(negRowsB, expected);
++  if (negErrorsB.length === 0) {
++    throw new Error('layer table self-test negative case (swapped rows) was not flagged');
++  }
++}
