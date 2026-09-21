@@ -17,7 +17,7 @@ use std::rc::Rc;
 use tokio::sync::watch;
 
 #[cfg(target_os = "windows")]
-use crate::ui_dioxus::windows::{win};
+use crate::ui_dioxus::windows::win;
 
 /// Work ("身外之物") module window root component.
 pub fn work_app_root(props: ModuleAppProps) -> Element {

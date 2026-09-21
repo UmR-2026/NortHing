@@ -1,0 +1,6 @@
+Cargo.lock
+src/apps/desktop/Cargo.toml
+src/apps/desktop/src/ui_dioxus/windows/work.rs
+.superpowers/sdd/w25-4-brief.md
+.superpowers/sdd/w25-4-report.md
+.superpowers/sdd/w25-4-allowlist.txt

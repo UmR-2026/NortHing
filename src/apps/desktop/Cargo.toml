@@ -59,8 +59,5 @@ pulldown-cmark = { workspace = true }
 # OS keyring for secure API key storage (C3, P1-2)
 keyring = { workspace = true }
 
-[dependencies.raw-window-handle]
-version = "0.6"
-
 [dev-dependencies]
 northhing-test-support = { path = "../../crates/support/test-support" }
