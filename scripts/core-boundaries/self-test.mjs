@@ -2736,3 +2736,82 @@ export function runManifestParserSelfTest({
     throw new Error('crate surface registration guard falsely matched prefix-similar unregistered crate');
   }
 }
+
+function areSetsEqualForTest(a, b) {
+  if (!a || !b || a.size !== b.size) return false;
+  for (const item of a) {
+    if (!b.has(item)) return false;
+  }
+  return true;
+}
+
+function validateLayerTableRows(rows, expected) {
+  const errors = [];
+  if (!rows || rows.length !== 7) {
+    errors.push(`expected 7 rows, got ${rows ? rows.length : 0}`);
+    return errors;
+  }
+  for (let i = 0; i < 7; i++) {
+    const row = rows[i];
+    const exp = expected[i];
+    if (row.index !== i + 1) {
+      errors.push(`row ${i + 1}: expected index ${i + 1}, found ${row.index}`);
+    }
+    if (!areSetsEqualForTest(row.paths, exp.paths)) {
+      errors.push(`row ${i + 1}: paths mismatch`);
+    }
+    if (!areSetsEqualForTest(row.entries, exp.entries)) {
+      errors.push(`row ${i + 1}: entries mismatch`);
+    }
+  }
+  return errors;
+}
+
+export function runLayerTableSelfTest({ parseLayerTable, expectedLayerRows }) {
+  const expected = expectedLayerRows();
+
+  // Positive case: valid markdown matching current EN table
+  const positiveMarkdown = `
+## Layered Module Index
+
+| # | Layer | Path | Owns | Modules / entries | Layer doc |
+|---|---|---|---|---|---|
+| 1 | Interfaces and entrypoints | \`src/apps/*\`, \`northing-installer\`, \`tests/e2e\`, \`src/crates/interfaces\` | Hosts | desktop, CLI, server, installer, E2E, \`acp\` | [interfaces](src/crates/interfaces/AGENTS.md) |
+| 2 | Product assembly | \`src/crates/assembly\` | Assembly | \`core\`, \`product-capabilities\` | [assembly](src/crates/assembly/AGENTS.md) |
+| 3 | Adapters | \`src/crates/adapters\` | Adapters | \`ai-adapters\` | [adapters](src/crates/adapters/AGENTS.md) |
+| 4 | Services | \`src/crates/services\` | Services | \`services-core\`, \`services-integrations\`, \`terminal\`, \`debug-log\` | [services](src/crates/services/AGENTS.md) |
+| 5 | Execution primitives | \`src/crates/execution\` | Execution | \`agent-dispatch\`, \`agent-runtime\`, \`agent-stream\`, \`tool-contracts\`, \`runtime-services\`, \`tool-execution\` | [execution](src/crates/execution/AGENTS.md) |
+| 6 | Stable contracts and product domains | \`src/crates/contracts\` | Contracts | \`core-types\`, \`events\`, \`runtime-ports\`, \`product-domains\`, \`kernel-api\`, \`disposable\` | [contracts](src/crates/contracts/AGENTS.md) |
+| 7 | Support | \`src/crates/support\` | Support | \`test-support\`, \`cli-internal\` | none |
+
+## Next Section
+`;
+
+  const positiveRows = parseLayerTable(positiveMarkdown, '## Layered Module Index');
+  const posErrors = validateLayerTableRows(positiveRows, expected);
+  if (posErrors.length !== 0) {
+    throw new Error(`layer table self-test positive case failed: ${posErrors.join(', ')}`);
+  }
+
+  // Negative case (a): deleted a module entry (e.g. tool-contracts from layer 5)
+  const negMarkdownA = positiveMarkdown.replace('`tool-contracts`, ', '');
+  const negRowsA = parseLayerTable(negMarkdownA, '## Layered Module Index');
+  const negErrorsA = validateLayerTableRows(negRowsA, expected);
+  if (negErrorsA.length === 0 || !negErrorsA.some((e) => e.includes('row 5') && e.includes('entries mismatch'))) {
+    throw new Error('layer table self-test negative case (deleted module entry) was not flagged');
+  }
+
+  // Negative case (b): swapped two rows (e.g. row 3 and row 4 swapped)
+  const lines = positiveMarkdown.split('\n');
+  const row3Idx = lines.findIndex((l) => l.startsWith('| 3 |'));
+  const row4Idx = lines.findIndex((l) => l.startsWith('| 4 |'));
+  const temp = lines[row3Idx];
+  lines[row3Idx] = lines[row4Idx];
+  lines[row4Idx] = temp;
+  const negMarkdownB = lines.join('\n');
+  const negRowsB = parseLayerTable(negMarkdownB, '## Layered Module Index');
+  const negErrorsB = validateLayerTableRows(negRowsB, expected);
+  if (negErrorsB.length === 0) {
+    throw new Error('layer table self-test negative case (swapped rows) was not flagged');
+  }
+}

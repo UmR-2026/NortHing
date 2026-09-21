@@ -19,7 +19,7 @@ northhing 是一个 Rust 工作区加上 React 前端的组合。
 
 | # | 层 | 路径 | 职责 | 模块 / 入口 | 层文档 |
 |---|---|---|---|---|---|
-| 1 | 接口与入口 | `src/apps/*`、`src/web-ui`、`northing-installer`、`tests/e2e`、`src/crates/interfaces` | 产品宿主、命令、UI 入口、协议接口以及跨表面测试 | desktop、CLI、server、Web UI、installer、E2E、`acp` | 最近本地 `AGENTS.md`；[interfaces](src/crates/interfaces/AGENTS.md) |
+| 1 | 接口与入口 | `src/apps/*`、`northing-installer`、`tests/e2e`、`src/crates/interfaces` | 产品宿主、命令、UI 入口、协议接口以及跨表面测试 | desktop、CLI、server、installer、E2E、`acp` | 最近本地 `AGENTS.md`；[interfaces](src/crates/interfaces/AGENTS.md) |
 | 2 | 产品装配 | `src/crates/assembly` | 兼容性导出、产品能力选择、product-full 装配以及适配器/服务注册 | `core`、`product-capabilities` | [AGENTS.md](src/crates/assembly/AGENTS.md) |
 | 3 | 适配器 | `src/crates/adapters` | AI 协议适配器与外部提供方翻译 | `ai-adapters` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
 | 4 | 服务 | `src/crates/services` | 可复用的 OS、文件系统、终端、MCP、远程、git、watch、进程、会话持久化原语以及网络实现 | `services-core`、`services-integrations`、`terminal`、`debug-log` | [AGENTS.md](src/crates/services/AGENTS.md) |

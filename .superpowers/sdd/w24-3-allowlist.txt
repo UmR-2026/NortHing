@@ -1,0 +1,8 @@
+.superpowers/sdd/w24-3-allowlist.txt
+.superpowers/sdd/w24-3-brief.md
+.superpowers/sdd/w24-3-report.md
+AGENTS-CN.md
+scripts/core-boundaries/checker.mjs
+scripts/core-boundaries/layer-table.mjs
+scripts/core-boundaries/rules/crate-layout.mjs
+scripts/core-boundaries/self-test.mjs

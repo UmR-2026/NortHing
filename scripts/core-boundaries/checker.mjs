@@ -26,7 +26,8 @@ import {
   forbiddenContentUnderRules,
   requiredContentRules,
 } from './rules/source-rules.mjs';
-import { runManifestParserSelfTest } from './self-test.mjs';
+import { runLayerTableSelfTest, runManifestParserSelfTest } from './self-test.mjs';
+import { checkLayerTables, expectedLayerRows, parseLayerTable } from './layer-table.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..');
@@ -960,12 +961,14 @@ export function runCoreBoundaryCheck() {
       surfacesExemptMembers,
       ROOT,
     });
+    runLayerTableSelfTest({ parseLayerTable, expectedLayerRows });
     console.log('Core boundary check self-test passed.');
     return;
   }
 
   checkCrateLayoutRules();
   checkCrateSurfaceRegistration();
+  checkLayerTables(ROOT, failures);
 
   for (const crateName of noCoreDependencyCrates) {
     const crateDir = crateDirForName(crateName);

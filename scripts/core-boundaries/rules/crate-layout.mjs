@@ -42,6 +42,13 @@ export const crateLayoutLayerNames = [
   'support',
 ];
 
+export const layerTableNonCrate = {
+  interfaces: {
+    paths: ['src/apps/*', 'northing-installer', 'tests/e2e'],
+    entries: ['desktop', 'CLI', 'server', 'installer', 'E2E'],
+  },
+};
+
 const crateLayoutByName = new Map(crateLayoutRules.map((rule) => [rule.crateName, rule]));
 
 export function crateLayoutRuleForName(crateName) {
