@@ -16,6 +16,7 @@ use std::rc::Rc;
 use tokio::sync::watch;
 
 use super::fmt_tokens;
+#[cfg(target_os = "windows")]
 use crate::ui_dioxus::windows::win;
 
 /// Facility ("设施") module window root component.

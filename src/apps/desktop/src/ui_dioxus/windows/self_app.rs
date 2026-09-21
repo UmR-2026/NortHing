@@ -16,6 +16,7 @@ use std::rc::Rc;
 use tokio::sync::watch;
 
 use super::fmt_tokens;
+#[cfg(target_os = "windows")]
 use crate::ui_dioxus::windows::win;
 
 /// Self ("它的自我") module window root component.

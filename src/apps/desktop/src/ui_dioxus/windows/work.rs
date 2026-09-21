@@ -16,6 +16,7 @@ use dioxus::desktop::tao::platform::windows::WindowExtWindows;
 use std::rc::Rc;
 use tokio::sync::watch;
 
+#[cfg(target_os = "windows")]
 use crate::ui_dioxus::windows::{win};
 
 /// Work ("身外之物") module window root component.
