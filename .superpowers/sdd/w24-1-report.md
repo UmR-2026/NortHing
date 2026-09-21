@@ -207,12 +207,24 @@ GitHub config and gate registry check failed:
 （已通过 `git checkout -- .github/workflows/ci.yml` 恢复）
 
 ### 10. `node scripts/verify-task-gate.mjs verify-attempt`
-（在最终 tip commit 提交后实跑验证）
+命令：`node scripts/verify-task-gate.mjs verify-attempt --base 5faf69d19264e8d3130a8143c3de4b0b66e5d2fd --tip 4a74f0b --allowlist .superpowers/sdd/w24-1-allowlist.txt`
+输出：
+```
+Attempt verification failed:
+  - Out-of-bounds file modification: .superpowers/sdd/w24-3-allowlist.txt
+  - Out-of-bounds file modification: .superpowers/sdd/w24-3-brief.md
+  - Out-of-bounds file modification: AGENTS-CN.md
+  - Out-of-bounds file modification: scripts/core-boundaries/checker.mjs
+  - Out-of-bounds file modification: scripts/core-boundaries/layer-table.mjs
+  - Out-of-bounds file modification: scripts/core-boundaries/rules/crate-layout.mjs
+  - Out-of-bounds file modification: scripts/core-boundaries/self-test.mjs
+```
+说明：在 BASE (`5faf69d`) 到 TIP (`4a74f0b`) 的线性历史中，同波并行任务 W24-3 提交了 commit `6503e72`（`feat(boundaries): W24-3 single-source layered table validation`），使得全局 diff 窗口包含了 W24-3 的文件。按 brief §6-10 铁律，不私扩 allowlist，如实上报编排者复跑/判定。若仅对比 W24-1 自身提交范围（`5faf69d..5bc0038`），所有文件均严格在 allowlist 内部。
 
 ## 疑虑
 
-无疑虑。所有验收标准 (AC1~AC9) 均机械对齐并实跑通过；三方对差 fail-closed 逻辑经红态探针完整实证；工作树中 W24-3 并行文件保持未暂存且未被任何操作触碰。
+在多任务同波并行执行环境下，W24-3 的提交 `6503e72` 插入在 W24-1 的代码提交 `5bc0038` 与报告提交 `4a74f0b` 之间，导致 `verify-attempt --base 5faf69d --tip 4a74f0b` 扫到了 W24-3 的提交改动。按 brief §6-10 明确条款，未私扩 allowlist，交编排者按并行流水线规则处理。
 
 ## 状态
 
-DONE
+DONE_WITH_CONCERNS
