@@ -1207,7 +1207,14 @@ export function runSelftestCases({ fixturesDir, repoRoot }) {
     const res = verifyRotBudget({ projectRoot: gitCaseScripts1.tmpDir, base: gitCaseScripts1.baseSha, silent: true });
     const passed =
       !res.success &&
-      res.violations.some((v) => v.includes('dir_entries:scripts') && v.includes('net increase prohibited') && v.includes('2026-10-15'));
+      res.violations.some(
+        (v) =>
+          v.includes('dir_entries:scripts') &&
+          v.includes('net increase prohibited') &&
+          v.includes('exceeds base count') &&
+          !v.includes('expires') &&
+          !v.includes('expired'),
+      );
     record('negative base: scripts retirement detects net increase when base has subdirectories', passed, 'rejects net increase in scripts when base has subdirectories (discriminates blob-only from line count)');
   } catch (err) {
     record('negative base: scripts retirement detects net increase when base has subdirectories', false, `failed with exception: ${err.message}`);
@@ -1236,7 +1243,14 @@ export function runSelftestCases({ fixturesDir, repoRoot }) {
     const res = verifyRotBudget({ projectRoot: gitCaseScripts2.tmpDir, base: gitCaseScripts2.baseSha, silent: true });
     const passed =
       !res.success &&
-      res.violations.some((v) => v.includes('dir_entries:scripts') && v.includes('net increase prohibited') && v.includes('2026-10-15'));
+      res.violations.some(
+        (v) =>
+          v.includes('dir_entries:scripts') &&
+          v.includes('net increase prohibited') &&
+          v.includes('exceeds base count') &&
+          !v.includes('expires') &&
+          !v.includes('expired'),
+      );
     record('negative base: scripts retirement compares actual count rather than ceiling', passed, 'rejects net increase even when below ceiling (compares actual count rather than ceiling)');
   } catch (err) {
     record('negative base: scripts retirement compares actual count rather than ceiling', false, `failed with exception: ${err.message}`);
