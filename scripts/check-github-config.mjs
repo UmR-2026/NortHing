@@ -34,6 +34,7 @@ addYamlFiles('.github/ISSUE_TEMPLATE');
 
 const errors = [];
 const workflowJobs = new Map();
+const jobsByJobId = new Map();
 
 for (const { relativePath, absolutePath } of yamlFiles) {
   const content = readFileSync(absolutePath, 'utf8');
@@ -48,6 +49,7 @@ for (const { relativePath, absolutePath } of yamlFiles) {
   }
 
   if (relativePath.startsWith('.github/workflows/')) {
+    const fileName = path.posix.basename(relativePath);
     const jobsNode = document.get('jobs', true);
     if (jobsNode && Array.isArray(jobsNode.items)) {
       for (const item of jobsNode.items) {
@@ -58,7 +60,12 @@ for (const { relativePath, absolutePath } of yamlFiles) {
         } else if (Array.isArray(item.range)) {
           jobText = content.slice(item.range[0], item.range[2]);
         }
-        workflowJobs.set(jobId, { relativePath, jobText });
+        const jobInfo = { relativePath, fileName, jobId, jobText };
+        workflowJobs.set(`${fileName}:${jobId}`, jobInfo);
+        if (!jobsByJobId.has(jobId)) {
+          jobsByJobId.set(jobId, []);
+        }
+        jobsByJobId.get(jobId).push(jobInfo);
       }
     }
   }
@@ -88,10 +95,31 @@ if (!registry || registry.version !== 1 || !Array.isArray(registry.gates)) {
   process.exit(1);
 }
 
+const EXPECTED_GATE_KEYS = new Set(['name', 'entry', 'enforcedAt', 'blocking']);
+
 for (let i = 0; i < registry.gates.length; i++) {
   const gate = registry.gates[i];
+  if (!gate || typeof gate !== 'object' || Array.isArray(gate)) {
+    errors.push(`Gate at index ${i} has invalid schema (expected gate object)`);
+    continue;
+  }
+
+  const gateKeys = Object.keys(gate);
+  const unknownKeys = gateKeys.filter((k) => !EXPECTED_GATE_KEYS.has(k));
+  const missingKeys = [...EXPECTED_GATE_KEYS].filter((k) => !(k in gate));
+
+  if (unknownKeys.length > 0) {
+    errors.push(
+      `Gate at index ${i}${gate.name ? ` ("${gate.name}")` : ''} has unknown keys: ${unknownKeys.join(', ')}`
+    );
+  }
+  if (missingKeys.length > 0) {
+    errors.push(
+      `Gate at index ${i}${gate.name ? ` ("${gate.name}")` : ''} is missing required keys: ${missingKeys.join(', ')}`
+    );
+  }
+
   if (
-    !gate ||
     typeof gate.name !== 'string' ||
     typeof gate.entry !== 'string' ||
     !Array.isArray(gate.enforcedAt) ||
@@ -101,14 +129,53 @@ for (let i = 0; i < registry.gates.length; i++) {
   }
 }
 
+// Check for ambiguous job IDs referenced by registry in CI targets
+const referencedCiJobIds = new Set();
+for (const gate of registry.gates) {
+  if (!gate || !Array.isArray(gate.enforcedAt)) continue;
+  for (const target of gate.enforcedAt) {
+    if (typeof target !== 'string' || !target.startsWith('ci:')) continue;
+    const rawJob = target.slice(3);
+    const jobId = rawJob.includes(':') ? rawJob.slice(rawJob.indexOf(':') + 1) : rawJob;
+    referencedCiJobIds.add(jobId);
+  }
+}
+
+for (const jobId of referencedCiJobIds) {
+  const matches = jobsByJobId.get(jobId) || [];
+  const uniqueFiles = [...new Set(matches.map((m) => m.relativePath))];
+  if (uniqueFiles.length > 1) {
+    errors.push(
+      `Ambiguous job id: CI job "${jobId}" referenced by gate registry is defined in multiple workflow files: ${uniqueFiles.join(', ')}`
+    );
+  }
+}
+
 // R1: registry gates claiming ci:<job> must have the job in workflow jobs,
-// and job YAML text must contain entry distinguishing substring (scripts/... path; inline: prefix gates skip).
+// and job YAML text must contain entry distinguishing substring (full trimmed entry; inline: prefix gates skip).
 for (const gate of registry.gates) {
   if (!gate || !Array.isArray(gate.enforcedAt)) continue;
   for (const target of gate.enforcedAt) {
     if (typeof target !== 'string' || !target.startsWith('ci:')) continue;
     const jobId = target.slice(3);
-    const jobInfo = workflowJobs.get(jobId);
+    let jobKey;
+    if (jobId.includes(':')) {
+      jobKey = jobId;
+    } else {
+      const matches = jobsByJobId.get(jobId) || [];
+      const uniqueFiles = [...new Set(matches.map((m) => m.relativePath))];
+      if (uniqueFiles.length === 0) {
+        errors.push(`Gate "${gate.name}": claimed CI job "${jobId}" not found in any workflow under .github/workflows`);
+        continue;
+      }
+      if (uniqueFiles.length > 1) {
+        // Ambiguous job id already reported in ambiguous job id check
+        continue;
+      }
+      jobKey = `${matches[0].fileName}:${jobId}`;
+    }
+
+    const jobInfo = workflowJobs.get(jobKey);
     if (!jobInfo) {
       errors.push(`Gate "${gate.name}": claimed CI job "${jobId}" not found in any workflow under .github/workflows`);
       continue;
@@ -118,8 +185,7 @@ for (const gate of registry.gates) {
       continue;
     }
 
-    const scriptMatch = typeof gate.entry === 'string' ? gate.entry.match(/scripts\/[A-Za-z0-9._-]+/) : null;
-    const needle = scriptMatch ? scriptMatch[0] : (typeof gate.entry === 'string' ? gate.entry.trim() : '');
+    const needle = typeof gate.entry === 'string' ? gate.entry.trim() : '';
     if (!needle || !jobInfo.jobText.includes(needle)) {
       errors.push(
         `Gate "${gate.name}": entry substring "${needle}" not found in CI job "${jobId}" (${jobInfo.relativePath})`

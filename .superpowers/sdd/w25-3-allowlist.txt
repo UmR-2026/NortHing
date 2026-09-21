@@ -1,0 +1,4 @@
+.superpowers/sdd/w25-3-allowlist.txt
+.superpowers/sdd/w25-3-brief.md
+.superpowers/sdd/w25-3-report.md
+scripts/check-github-config.mjs
