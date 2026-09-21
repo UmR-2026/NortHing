@@ -118,9 +118,13 @@ Repository hygiene check passed (7 content files scanned, 3940 filenames checked
 
 ### 5. Task Gate 验证 (verify-attempt)
 ```bash
-node scripts/verify-task-gate.mjs verify-attempt --base e57c6387de88110789ae600d90a4853da05aa90a --tip <TIP_SHA> --allowlist .superpowers/sdd/w25-4-allowlist.txt
+node scripts/verify-task-gate.mjs verify-attempt --base e57c6387de88110789ae600d90a4853da05aa90a --tip b5b49aa --allowlist .superpowers/sdd/w25-4-allowlist.txt
 ```
-（待 commit 后记录具体 tip sha 与输出）
+输出：
+```
+Attempt verification passed: all modified files are within allowlist.
+```
+退出码：0
 
 ## 疑虑
 
