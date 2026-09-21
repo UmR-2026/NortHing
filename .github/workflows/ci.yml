@@ -29,9 +29,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Windows-only per user decision 2026-09-05; terminal-core E0624 fixed 2026-09-08 (W20-1); cross-target compile sentinel planned (W24)
+        # Cross-target compile sentinel: ubuntu-latest landed in W24-1; windows-latest retains full test suite execution.
         os:
           - windows-latest
+          - ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -141,13 +142,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
 
       - name: Run rot budget checker and self-tests
-        run: node scripts/verify-rot-budget.test.mjs && node scripts/verify-rot-budget.mjs
+        run: node scripts/verify-rot-budget.test.mjs && node scripts/verify-rot-budget.mjs --base ${{ github.event.pull_request.base.sha || github.event.before }}
 
   # ── repo hygiene check ─────────────────────────────────────────────
   repo-hygiene:
@@ -187,5 +190,31 @@ jobs:
       - name: Run i18n contract test
         continue-on-error: true
         run: pnpm run i18n:contract:test:ci
+
+  # ── meta-gates: gate registry, task-gate selftest, boundary selftest ─
+  meta-gates:
+    name: meta gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run github config and gate registry checker
+        run: node scripts/check-github-config.mjs
+
+      - name: Run task gate selftest
+        run: node scripts/verify-task-gate.mjs --selftest
+
+      - name: Run core boundaries selftest
+        run: northhing_BOUNDARY_CHECK_SELF_TEST=1 node scripts/check-core-boundaries.mjs
 
 

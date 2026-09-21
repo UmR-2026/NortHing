@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "gates": [
+    {
+      "name": "rust-build-check",
+      "entry": "inline:ci.yml rust-build-check",
+      "enforcedAt": [
+        "ci:rust-build-check"
+      ],
+      "blocking": true
+    },
+    {
+      "name": "rust-tests",
+      "entry": "inline:ci.yml rust-tests-serial",
+      "enforcedAt": [
+        "ci:rust-tests-serial"
+      ],
+      "blocking": true
+    },
+    {
+      "name": "kernel-api-dep-guard",
+      "entry": "inline:ci.yml kernel-api-clean",
+      "enforcedAt": [
+        "ci:kernel-api-clean"
+      ],
+      "blocking": true
+    },
+    {
+      "name": "core-boundaries",
+      "entry": "node scripts/check-core-boundaries.mjs",
+      "enforcedAt": [
+        "ci:core-boundaries"
+      ],
+      "blocking": true
+    },
+    {
+      "name": "rot-budget",
+      "entry": "node scripts/verify-rot-budget.mjs",
+      "enforcedAt": [
+        "ci:rot-budget"
+      ],
+      "blocking": true
+    },
+    {
+      "name": "repo-hygiene",
+      "entry": "node scripts/check-repo-hygiene.mjs",
+      "enforcedAt": [
+        "ci:repo-hygiene"
+      ],
+      "blocking": true
+    },
+    {
+      "name": "github-config",
+      "entry": "node scripts/check-github-config.mjs",
+      "enforcedAt": [
+        "ci:meta-gates"
+      ],
+      "blocking": true
+    },
+    {
+      "name": "task-gate",
+      "entry": "node scripts/verify-task-gate.mjs --selftest",
+      "enforcedAt": [
+        "local:orchestrator",
+        "ci:meta-gates"
+      ],
+      "blocking": true
+    },
+    {
+      "name": "boundary-selftest",
+      "entry": "northhing_BOUNDARY_CHECK_SELF_TEST=1 node scripts/check-core-boundaries.mjs",
+      "enforcedAt": [
+        "ci:meta-gates"
+      ],
+      "blocking": true
+    },
+    {
+      "name": "i18n-contract",
+      "entry": "inline:ci.yml i18n-contract",
+      "enforcedAt": [
+        "ci:i18n-contract"
+      ],
+      "blocking": false
+    },
+    {
+      "name": "verify-tauri-latest-json",
+      "entry": "node scripts/verify-tauri-latest-json.mjs",
+      "enforcedAt": [
+        "local:release-flow"
+      ],
+      "blocking": true
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+.github/workflows/ci.yml
+.superpowers/sdd/w24-1-allowlist.txt
+.superpowers/sdd/w24-1-brief.md
+.superpowers/sdd/w24-1-report.md
+package.json
+pnpm-lock.yaml
+scripts/check-github-config.mjs
+scripts/desktop-tauri-build.mjs
+scripts/gate-registry.json
