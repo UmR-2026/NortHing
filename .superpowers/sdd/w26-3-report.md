@@ -80,8 +80,13 @@ Core boundary check passed.
 ```
 结果：exit 0。
 
-### 6. `node scripts/verify-task-gate.mjs verify-attempt --base 18344f8 --tip <TIP_SHA> --allowlist .superpowers/sdd/w26-3-allowlist.txt`
-（待 commit 后填入 commit sha 并验证）
+### 6. `node scripts/verify-task-gate.mjs verify-attempt --base 18344f8 --tip 6e324f8 --allowlist .superpowers/sdd/w26-3-allowlist.txt`
+```text
+Attempt verification passed: all modified files are within allowlist.
+```
+结果：exit 0。
+
+最后 Commit SHA: `6e324f8`（代码提交）/ 附带 report 回填提交。
 
 ## 疑虑
 
