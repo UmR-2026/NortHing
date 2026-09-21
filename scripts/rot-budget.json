@@ -29,11 +29,16 @@
   "ceiling": 109,
   "note": "R-13 allow(dead_code) ratchet: only down; baseline rebased 2026-08-28 per D1 adjudication to checker semantics (excludes tests.rs and *_tests/ dirs)"
  },
- "dir_entries:scripts": {
-  "kind": "dir-entry-count",
-  "ceiling": 48,
-  "note": "一次性额度：用户 2026-09-05 拍板 +6 供 Phase -1~2 整改用，到期 2026-10-15 未用部分回落需重确认；新增脚本仍须退役旧脚本（机械化待 Phase 0）"
- },
+  "dir_entries:scripts": {
+   "kind": "dir-entry-count",
+   "ceiling": 48,
+   "authorization": {
+    "delta": 6,
+    "expires": "2026-10-15",
+    "reference": "user sign-off 2026-09-05"
+   },
+   "note": "retirement quota: see authorization field for active delta and expiry"
+  },
  "dir_entries:docs/design": {
   "kind": "dir-entry-count",
   "ceiling": 1,

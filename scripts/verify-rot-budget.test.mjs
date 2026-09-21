@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
   verifyRotBudget,
@@ -1077,4 +1077,136 @@ test('W21-1 F1: spawn verify-rot-budget.mjs --base= fails closed with exit 1 and
   });
   assert.equal(proc.status, 1);
   assert.ok(proc.stderr.includes('--base requires a commit SHA or ref'));
+});
+
+function createGitFixture(baseManifest, extraScripts = {}) {
+  const tmpDir = createFixtureDir();
+  execFileSync('git', ['init', '-q'], { cwd: tmpDir, stdio: 'ignore' });
+  execFileSync('git', ['config', 'user.name', 'test'], { cwd: tmpDir, stdio: 'ignore' });
+  execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: tmpDir, stdio: 'ignore' });
+  execFileSync('git', ['config', 'core.autocrlf', 'false'], { cwd: tmpDir, stdio: 'ignore' });
+
+  const scriptsDir = path.join(tmpDir, 'scripts');
+  fs.mkdirSync(scriptsDir, { recursive: true });
+  fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(baseManifest, null, 2), 'utf8');
+
+  for (const [name, content] of Object.entries(extraScripts)) {
+    fs.writeFileSync(path.join(scriptsDir, name), content, 'utf8');
+  }
+
+  execFileSync('git', ['add', '.'], { cwd: tmpDir, stdio: 'ignore' });
+  execFileSync('git', ['commit', '-q', '-m', 'base'], { cwd: tmpDir, stdio: 'ignore' });
+  const baseSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: tmpDir, encoding: 'utf8' }).trim();
+  return { tmpDir, baseSha, scriptsDir };
+}
+
+test('W25-1 (a): live authorization covers delta growth -> no quota violation and quota check executed', () => {
+  const baseManifest = {
+    'dir_entries:scripts': {
+      kind: 'dir-entry-count',
+      ceiling: 48,
+      authorization: {
+        delta: 6,
+        expires: '2099-12-31',
+        reference: 'user sign-off 2026-09-05',
+      },
+    },
+  };
+  const { tmpDir, baseSha, scriptsDir } = createGitFixture(baseManifest, {
+    's1.mjs': '// s1\n',
+  });
+  try {
+    fs.writeFileSync(path.join(scriptsDir, 's2.mjs'), '// s2\n', 'utf8');
+    const result = verifyRotBudget({ projectRoot: tmpDir, base: baseSha, silent: true });
+    assert.equal(result.success, true);
+    assert.ok(!result.violations.some((v) => v.includes('dir_entries:scripts')));
+    // 断言配额检查真实执行过（counts['dir_entries:scripts'] 已填充）
+    assert.equal(result.counts['dir_entries:scripts'], 3);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W25-1 (b): growth exceeding authorized delta -> quota violation with counts', () => {
+  const baseManifest = {
+    'dir_entries:scripts': {
+      kind: 'dir-entry-count',
+      ceiling: 48,
+      authorization: {
+        delta: 2,
+        expires: '2099-12-31',
+        reference: 'user sign-off 2026-09-05',
+      },
+    },
+  };
+  const { tmpDir, baseSha, scriptsDir } = createGitFixture(baseManifest, {
+    's1.mjs': '// s1\n',
+  });
+  try {
+    fs.writeFileSync(path.join(scriptsDir, 's2.mjs'), '// s2\n', 'utf8');
+    fs.writeFileSync(path.join(scriptsDir, 's3.mjs'), '// s3\n', 'utf8');
+    fs.writeFileSync(path.join(scriptsDir, 's4.mjs'), '// s4\n', 'utf8');
+    const result = verifyRotBudget({ projectRoot: tmpDir, base: baseSha, silent: true });
+    assert.equal(result.success, false);
+    assert.ok(
+      result.violations.some((v) =>
+        v.includes('dir_entries:scripts: current 5 exceeds base count 2 + authorized delta 2 — net increase beyond live authorization (expires 2099-12-31) prohibited'),
+      ),
+    );
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W25-1 (c): growth with expired authorization -> quota violation with expired semantics', () => {
+  const baseManifest = {
+    'dir_entries:scripts': {
+      kind: 'dir-entry-count',
+      ceiling: 48,
+      authorization: {
+        delta: 6,
+        expires: '2020-01-01',
+        reference: 'user sign-off 2026-09-05',
+      },
+    },
+  };
+  const { tmpDir, baseSha, scriptsDir } = createGitFixture(baseManifest, {
+    's1.mjs': '// s1\n',
+  });
+  try {
+    fs.writeFileSync(path.join(scriptsDir, 's2.mjs'), '// s2\n', 'utf8');
+    const result = verifyRotBudget({ projectRoot: tmpDir, base: baseSha, silent: true });
+    assert.equal(result.success, false);
+    assert.ok(
+      result.violations.some((v) =>
+        v.includes('dir_entries:scripts: current 3 exceeds base count 2') &&
+        v.includes('expired 2020-01-01'),
+      ),
+    );
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W25-1 (d): growth without authorization field -> quota violation without expires text', () => {
+  const baseManifest = {
+    'dir_entries:scripts': {
+      kind: 'dir-entry-count',
+      ceiling: 48,
+    },
+  };
+  const { tmpDir, baseSha, scriptsDir } = createGitFixture(baseManifest, {
+    's1.mjs': '// s1\n',
+  });
+  try {
+    fs.writeFileSync(path.join(scriptsDir, 's2.mjs'), '// s2\n', 'utf8');
+    const result = verifyRotBudget({ projectRoot: tmpDir, base: baseSha, silent: true });
+    assert.equal(result.success, false);
+    const violation = result.violations.find((v) => v.includes('dir_entries:scripts'));
+    assert.ok(violation);
+    assert.ok(violation.includes('dir_entries:scripts: current 3 exceeds base count 2 — net increase prohibited under scripts retirement quota'));
+    assert.ok(!violation.includes('expires') && !violation.includes('expired'));
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 });

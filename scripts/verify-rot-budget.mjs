@@ -83,10 +83,12 @@ export function validateManifest(manifest, projectRoot = process.cwd(), todayUtc
       if (typeof entry.authorization !== 'object' || entry.authorization === null || Array.isArray(entry.authorization)) {
         errors.push(`${key}: "authorization" must be an object if present`);
       } else {
-        for (const field of ['reason', 'commit', 'expires']) {
-          if (typeof entry.authorization[field] !== 'string' || entry.authorization[field].trim() === '') {
-            errors.push(`${key}: "authorization.${field}" must be a non-empty string`);
-          }
+        const hasDelta = entry.authorization.delta !== undefined;
+        if (hasDelta && (typeof entry.authorization.delta !== 'number' || !Number.isFinite(entry.authorization.delta))) {
+          errors.push(`${key}: "authorization.delta" must be a number`);
+        }
+        for (const field of hasDelta ? ['reference', 'expires'] : ['reason', 'commit', 'expires']) {
+          if (typeof entry.authorization[field] !== 'string' || entry.authorization[field].trim() === '') errors.push(`${key}: "authorization.${field}" must be a non-empty string`);
         }
         if (typeof entry.authorization.expires === 'string' && !/^\d{4}-\d{2}-\d{2}$/.test(entry.authorization.expires)) {
           errors.push(`${key}: "authorization.expires" must match YYYY-MM-DD format, got "${entry.authorization.expires}"`);
@@ -635,15 +637,8 @@ export function verifyRotBudget({
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'pipe'],
       });
-      let blobCount = 0;
       const lsLines = rawLs.trim().split('\n').filter(Boolean);
-      for (const line of lsLines) {
-        const match = line.trim().match(/^\d+\s+(\w+)\s+/);
-        if (match && match[1] === 'blob') {
-          blobCount++;
-        }
-      }
-      baseScriptsCount = blobCount;
+      baseScriptsCount = lsLines.filter((l) => /^\d+\s+blob\s+/.test(l.trim())).length;
     } catch (err) {
       violations.push(`Failed to inspect base scripts directory from git ls-tree ${base} scripts/: ${err.message}`);
     }
@@ -842,21 +837,25 @@ export function verifyRotBudget({
     }
   }
 
-  // Scripts retirement quota check under --base mode (net increase prohibited)
+  // Scripts retirement quota check under --base mode (net increase prohibited unless live authorization)
   if (base && baseScriptsCount !== null) {
     const scriptsDir = path.join(projectRoot, 'scripts');
     let tipScriptsCount = 0;
     if (fs.existsSync(scriptsDir) && fs.statSync(scriptsDir).isDirectory()) {
-      const entries = fs.readdirSync(scriptsDir, { withFileTypes: true });
-      tipScriptsCount = entries.filter((e) => e.isFile()).length;
+      tipScriptsCount = fs.readdirSync(scriptsDir, { withFileTypes: true }).filter((e) => e.isFile()).length;
     }
-    if (counts['dir_entries:scripts'] === undefined) {
-      counts['dir_entries:scripts'] = tipScriptsCount;
-    }
-    if (tipScriptsCount > baseScriptsCount) {
-      violations.push(
-        `dir_entries:scripts: current ${tipScriptsCount} exceeds base count ${baseScriptsCount} — net increase prohibited under scripts retirement quota (expires 2026-10-15)`,
-      );
+    if (counts['dir_entries:scripts'] === undefined) counts['dir_entries:scripts'] = tipScriptsCount;
+    const auth = manifest['dir_entries:scripts']?.authorization;
+    const live = isAuthorizationLive(auth, todayUtc);
+    const liveDelta = live && typeof auth?.delta === 'number' ? auth.delta : 0;
+    if (tipScriptsCount > baseScriptsCount + liveDelta) {
+      if (live) {
+        violations.push(`dir_entries:scripts: current ${tipScriptsCount} exceeds base count ${baseScriptsCount} + authorized delta ${liveDelta} — net increase beyond live authorization (expires ${auth.expires}) prohibited`);
+      } else if (auth && typeof auth.expires === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(auth.expires)) {
+        violations.push(`dir_entries:scripts: current ${tipScriptsCount} exceeds base count ${baseScriptsCount} — net increase prohibited under scripts retirement quota (expired ${auth.expires})`);
+      } else {
+        violations.push(`dir_entries:scripts: current ${tipScriptsCount} exceeds base count ${baseScriptsCount} — net increase prohibited under scripts retirement quota`);
+      }
     }
   }
 
