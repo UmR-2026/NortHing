@@ -61,9 +61,6 @@ keyring = { workspace = true }
 
 [dependencies.raw-window-handle]
 version = "0.6"
-[dependencies.windows]
-workspace = true
-features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"]
 
 [dev-dependencies]
 northhing-test-support = { path = "../../crates/support/test-support" }
