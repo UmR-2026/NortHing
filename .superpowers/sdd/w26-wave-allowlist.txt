@@ -27,6 +27,7 @@
 .superpowers/sdd/w26-wave-allowlist.txt
 Cargo.lock
 docs/archive/handoffs/2026-09-21-w25-complete-w26-next.md
+docs/handoffs/2026-09-21-w25-complete-w26-next.md
 docs/handoffs/2026-09-22-w26-partial-2of5.md
 src/apps/cli/src/keyring_keys.rs
 src/apps/cli/src/main.rs
