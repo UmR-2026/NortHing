@@ -39,11 +39,7 @@ fn extract_tool_records(turn: &DialogTurnData) -> Vec<ToolUseRecord> {
     let mut records = Vec::new();
     for round in &turn.model_rounds {
         for tool_item in &round.tool_items {
-            let ok = tool_item
-                .tool_result
-                .as_ref()
-                .map(|r| r.success)
-                .unwrap_or(false);
+            let ok = tool_item.tool_result.as_ref().map(|r| r.success).unwrap_or(false);
             records.push(ToolUseRecord {
                 name: tool_item.tool_name.clone(),
                 ok,
@@ -70,11 +66,7 @@ fn extract_failures(turn: &DialogTurnData) -> Vec<ToolFailureRecord> {
                 .map(|item| {
                     let idx = global_idx;
                     global_idx += 1;
-                    let ok = item
-                        .tool_result
-                        .as_ref()
-                        .map(|r| r.success)
-                        .unwrap_or(false);
+                    let ok = item.tool_result.as_ref().map(|r| r.success).unwrap_or(false);
                     let error_first_line = item
                         .tool_result
                         .as_ref()
@@ -156,8 +148,8 @@ fn first_line_truncated(s: &str, max_chars: usize) -> String {
 mod tests {
     use super::*;
     use crate::service::session::{
-        DialogTurnData, DialogTurnKind, ModelRoundData, ToolCallData, ToolItemData,
-        ToolResultData, TurnStatus, UserMessageData,
+        DialogTurnData, DialogTurnKind, ModelRoundData, ToolCallData, ToolItemData, ToolResultData, TurnStatus,
+        UserMessageData,
     };
 
     fn make_test_turn(turn_id: &str) -> DialogTurnData {
@@ -179,6 +171,7 @@ mod tests {
             end_time: Some(2000),
             duration_ms: Some(1000),
             token_usage: None,
+            error_detail: None,
             status: TurnStatus::Completed,
         }
     }
@@ -490,12 +483,7 @@ mod tests {
             round_index: 1,
             timestamp: 1200,
             text_items: vec![],
-            tool_items: vec![make_tool_item_with_result(
-                "Bash",
-                true,
-                None,
-                Some("ls succeeded"),
-            )],
+            tool_items: vec![make_tool_item_with_result("Bash", true, None, Some("ls succeeded"))],
             thinking_items: vec![],
             start_time: 1200,
             end_time: Some(1300),

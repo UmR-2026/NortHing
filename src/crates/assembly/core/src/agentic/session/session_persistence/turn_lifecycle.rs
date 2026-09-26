@@ -27,6 +27,7 @@ use crate::util::errors::{NortHingError, NortHingResult};
 use crate::util::sanitize_plain_model_output;
 use crate::util::timing::elapsed_ms_u64;
 use dashmap::DashMap;
+use northhing_core_types::AiErrorDetail;
 pub use northhing_runtime_ports::SessionViewRestoreTiming;
 use northhing_runtime_ports::{SessionStoragePathRequest, SessionStorePort, SessionViewRestoreRequest};
 use northhing_services_core::session::{
@@ -442,7 +443,13 @@ impl SessionManager {
 
     /// Mark a dialog turn as failed and persist it.
     /// Unlike `complete_dialog_turn`, this sets the state to `Failed` with an error message.
-    pub(crate) async fn fail_dialog_turn(&self, session_id: &str, turn_id: &str, error: String) -> NortHingResult<()> {
+    pub(crate) async fn fail_dialog_turn(
+        &self,
+        session_id: &str,
+        turn_id: &str,
+        error: String,
+        error_detail: Option<AiErrorDetail>,
+    ) -> NortHingResult<()> {
         if !self.should_persist_session_id(session_id) {
             debug!(
                 "Skipping dialog turn persistence for transient session failure: session_id={}, turn_id={}, error={}",
@@ -467,6 +474,7 @@ impl SessionManager {
             .ok_or_else(|| NortHingError::NotFound(format!("Dialog turn not found: {}", turn_id)))?;
 
         turn.status = TurnStatus::Error;
+        turn.error_detail = error_detail;
         turn.end_time = Some(
             SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)

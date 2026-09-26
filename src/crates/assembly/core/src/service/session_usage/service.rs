@@ -138,6 +138,7 @@ pub mod test_helpers {
             end_time: Some(1_300 + turn_index as u64),
             duration_ms: Some(300),
             token_usage: None,
+            error_detail: None,
             status: TurnStatus::Completed,
         }
     }

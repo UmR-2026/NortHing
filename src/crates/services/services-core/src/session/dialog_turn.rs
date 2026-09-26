@@ -7,6 +7,7 @@
 //! those are imported through `super::model_round::*` so the god-split keeps
 //! the original `crate::session::types::*` re-export surface intact.
 
+use northhing_core_types::AiErrorDetail;
 use serde::{Deserialize, Serialize};
 
 use super::model_round::{ModelRoundData, UserMessageData};
@@ -63,6 +64,10 @@ pub struct DialogTurnData {
     /// Provider-reported token usage for this dialog turn, when available.
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "token_usage")]
     pub token_usage: Option<DialogTurnTokenUsageData>,
+
+    /// Detailed error payload when the turn ended in an error status.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "error_detail")]
+    pub error_detail: Option<AiErrorDetail>,
 
     /// Turn status
     pub status: TurnStatus,
@@ -155,6 +160,7 @@ impl DialogTurnData {
             end_time: None,
             duration_ms: None,
             token_usage: None,
+            error_detail: None,
             status: TurnStatus::InProgress,
         }
     }
@@ -174,5 +180,117 @@ impl DialogTurnData {
     /// Counts total tool calls.
     pub fn count_tool_calls(&self) -> usize {
         self.model_rounds.iter().map(|round| round.tool_items.len()).sum()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use northhing_core_types::ErrorCategory;
+
+    fn sample_user_message() -> UserMessageData {
+        UserMessageData {
+            id: "msg-0".to_string(),
+            content: "Hello world".to_string(),
+            timestamp: 1_700_000_000,
+            metadata: None,
+        }
+    }
+
+    #[test]
+    fn test_serde_backward_compatibility_old_format_without_error_detail() {
+        let old_json = serde_json::json!({
+            "turnId": "turn-1",
+            "turnIndex": 0,
+            "sessionId": "session-1",
+            "timestamp": 1_700_000_000,
+            "kind": "user_dialog",
+            "userMessage": {
+                "id": "msg-0",
+                "content": "Hello world",
+                "timestamp": 1_700_000_000
+            },
+            "modelRounds": [],
+            "startTime": 1_700_000_000,
+            "status": "error"
+        });
+
+        let turn: DialogTurnData = serde_json::from_value(old_json).expect("deserialize old json");
+        assert_eq!(turn.turn_id, "turn-1");
+        assert_eq!(turn.status, TurnStatus::Error);
+        assert!(turn.error_detail.is_none());
+    }
+
+    #[test]
+    fn test_serde_roundtrip_with_error_detail_camel_case() {
+        let mut turn = DialogTurnData::new("turn-2".to_string(), 1, "session-1".to_string(), sample_user_message());
+        turn.status = TurnStatus::Error;
+        let detail = AiErrorDetail {
+            category: ErrorCategory::ProviderQuota,
+            provider: Some("anthropic".to_string()),
+            provider_code: Some("insufficient_quota".to_string()),
+            provider_message: Some("Your credit balance is too low".to_string()),
+            request_id: Some("req-123".to_string()),
+            http_status: Some(402),
+            retryable: Some(false),
+            action_hints: vec!["open_model_settings".to_string()],
+        };
+        turn.error_detail = Some(detail.clone());
+
+        let json_value = serde_json::to_value(&turn).expect("serialize turn with error_detail");
+        assert!(
+            json_value.get("errorDetail").is_some(),
+            "errorDetail field should be present in camelCase"
+        );
+        assert_eq!(json_value["errorDetail"]["category"], "provider_quota");
+        assert_eq!(
+            json_value["errorDetail"]["providerMessage"],
+            "Your credit balance is too low"
+        );
+
+        let deserialized: DialogTurnData = serde_json::from_value(json_value).expect("deserialize roundtrip turn");
+        assert_eq!(deserialized.error_detail, Some(detail));
+    }
+
+    #[test]
+    fn test_serde_snake_case_alias_error_detail() {
+        let json_with_snake = serde_json::json!({
+            "turnId": "turn-3",
+            "turnIndex": 2,
+            "sessionId": "session-1",
+            "timestamp": 1_700_000_000,
+            "kind": "user_dialog",
+            "userMessage": {
+                "id": "msg-0",
+                "content": "Hello world",
+                "timestamp": 1_700_000_000
+            },
+            "modelRounds": [],
+            "startTime": 1_700_000_000,
+            "status": "error",
+            "error_detail": {
+                "category": "rate_limit",
+                "providerMessage": "Too many requests"
+            }
+        });
+
+        let turn: DialogTurnData = serde_json::from_value(json_with_snake).expect("deserialize snake_case alias");
+        let detail = turn.error_detail.expect("error_detail should be populated");
+        assert_eq!(detail.category, ErrorCategory::RateLimit);
+        assert_eq!(detail.provider_message.as_deref(), Some("Too many requests"));
+    }
+
+    #[test]
+    fn test_serde_skip_serializing_if_none() {
+        let turn = DialogTurnData::new("turn-4".to_string(), 3, "session-1".to_string(), sample_user_message());
+        let json_value = serde_json::to_value(&turn).expect("serialize turn without error");
+        assert!(
+            json_value.get("errorDetail").is_none(),
+            "errorDetail should be omitted when None"
+        );
+        assert!(
+            json_value.get("error_detail").is_none(),
+            "error_detail should be omitted when None"
+        );
     }
 }

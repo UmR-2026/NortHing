@@ -183,6 +183,7 @@ impl ConversationCoordinator {
     ) -> crate::service::session::TurnStatus {
         let error_text = error.to_string();
         let recoverable = !matches!(error, NortHingError::AIClient(_) | NortHingError::Timeout(_));
+        let error_detail = error.error_detail();
 
         error!("Dialog turn execution failed: {}", error_text);
 
@@ -193,7 +194,7 @@ impl ConversationCoordinator {
                     turn_id: turn_id.to_string(),
                     error: error_text.clone(),
                     error_category: Some(error.error_category()),
-                    error_detail: Some(error.error_detail()),
+                    error_detail: Some(error_detail.clone()),
                 },
                 Some(EventPriority::Critical),
             )
@@ -206,7 +207,7 @@ impl ConversationCoordinator {
         }
 
         if let Err(persist_error) = session_manager
-            .fail_dialog_turn(session_id, turn_id, error_text.clone())
+            .fail_dialog_turn(session_id, turn_id, error_text.clone(), Some(error_detail))
             .await
         {
             error!(
