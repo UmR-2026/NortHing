@@ -293,7 +293,7 @@ pub enum AgenticEvent {
 
     /// User "steering" message injected into a running dialog turn at a model
     /// round boundary (Codex-style mid-turn injection).
-    // TODO(surface): The frontend renders this as a synthetic record inside the current turn so the user can see the message they just steered with. (当前无任何 surface 消费（2026-09-09 ZCode 审查）)
+    // Consumed by desktop (via KernelEventDto::Banner) and CLI chat/exec surfaces (W26-1).
     UserSteeringInjected {
         session_id: String,
         turn_id: String,

@@ -368,6 +368,15 @@ impl ExecMode {
                     AgenticEvent::ContextCompressionFailed { error, .. } => {
                         self.print_text(|| eprintln!("\nContext compression failed: {error}"));
                     }
+                    AgenticEvent::UserSteeringInjected { display_content, .. } => {
+                        let preview = crate::ui::string_utils::truncate_str(display_content, 60);
+                        let msg = if preview.is_empty() {
+                            "User steering injected".to_string()
+                        } else {
+                            format!("User steering injected: {preview}")
+                        };
+                        self.print_text(|| println!("\n{msg}"));
+                    }
 
                     _ => {}
                 }

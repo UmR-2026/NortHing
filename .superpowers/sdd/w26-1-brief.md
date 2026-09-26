@@ -17,7 +17,7 @@ Plan `.superpowers/sdd/plan-2026-09-10-w23-w26-closure-and-decoupling.md` §1：
 
 ## 2. 编排者预检结论（逐项钉死，直接采信）
 
-BASE = `434f9a4`（= 派发前 HEAD，origin/main 仍为 3e9f4b5）。
+BASE = `831094c`（= 派发前 HEAD，origin/main 仍为 3e9f4b5）。
 
 | 事实 | 证据 |
 |---|---|
@@ -59,7 +59,7 @@ BASE = `434f9a4`（= 派发前 HEAD，origin/main 仍为 3e9f4b5）。
 2. `rustup run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full kernel_facade` → 绿（含新映射用例与更新后的 drops 钉死测试）
 3. `rustup run stable-x86_64-pc-windows-msvc cargo check -p northhing-cli` → 0 error
 4. `node scripts/check-repo-hygiene.mjs` → exit 0
-5. `node scripts/verify-task-gate.mjs verify-attempt --base 434f9a4 --tip <本单最后 commit sha> --allowlist .superpowers/sdd/w26-1-allowlist.txt` → exit 0（自建 allowlist 含自身；**窗口内若出现其它 W26 单文件，停手报编排者复跑，不得私扩 allowlist**）
+5. `node scripts/verify-task-gate.mjs verify-attempt --base 831094c --tip <本单最后 commit sha> --allowlist .superpowers/sdd/w26-1-allowlist.txt` → exit 0（自建 allowlist 含自身；**窗口内若出现其它 W26 单文件，停手报编排者复跑，不得私扩 allowlist**）
 
 ## 7. 报告
 
@@ -67,7 +67,7 @@ BASE = `434f9a4`（= 派发前 HEAD，origin/main 仍为 3e9f4b5）。
 
 ## 8. 派发元信息
 
-- BASE: `434f9a4`
+- BASE: `831094c`
 - 允许文件集：
   - `src/crates/assembly/core/src/kernel_facade/events.rs`
   - `src/crates/contracts/events/src/agentic.rs`（仅 :296 注释一行，S6）

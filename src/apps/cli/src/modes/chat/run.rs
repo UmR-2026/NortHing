@@ -406,6 +406,23 @@ pub fn run_loop(
                         tracing::warn!("Context compression failed: {}", error);
                     }
                 }
+                AgenticEvent::UserSteeringInjected {
+                    turn_id,
+                    display_content,
+                    ..
+                } => {
+                    if chat_state.current_turn_id().map_or(true, |id| id == turn_id) {
+                        let preview = crate::ui::string_utils::truncate_str(display_content, 60);
+                        let msg = if preview.is_empty() {
+                            "User steering injected".to_string()
+                        } else {
+                            format!("User steering injected: {preview}")
+                        };
+                        chat_view.set_status(Some(msg.clone()));
+                        needs_redraw = true;
+                        tracing::info!("{msg}");
+                    }
+                }
 
                 // Other events we don't need to handle in the UI
                 _ => {}

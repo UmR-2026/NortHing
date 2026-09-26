@@ -1,0 +1,7 @@
+src/crates/assembly/core/src/kernel_facade/events.rs
+src/crates/contracts/events/src/agentic.rs
+src/apps/cli/src/modes/chat/run.rs
+src/apps/cli/src/modes/exec.rs
+.superpowers/sdd/w26-1-brief.md
+.superpowers/sdd/w26-1-report.md
+.superpowers/sdd/w26-1-allowlist.txt

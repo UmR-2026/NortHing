@@ -394,10 +394,10 @@ pub(crate) fn agentic_event_to_dtos(event: &AgenticEvent) -> Vec<KernelEventDto>
             debug!("DeepReviewQueueStateChanged intentionally dropped at facade");
             vec![]
         }
-        AgenticEvent::UserSteeringInjected { .. } => {
-            debug!("UserSteeringInjected intentionally dropped at facade");
-            vec![]
-        }
+        AgenticEvent::UserSteeringInjected { display_content, .. } => vec![KernelEventDto::Banner {
+            level: BannerLevel::Info,
+            message: display_content.clone(),
+        }],
         AgenticEvent::SessionModelAutoMigrated { .. } => {
             debug!("SessionModelAutoMigrated intentionally dropped at facade");
             vec![]
@@ -509,6 +509,46 @@ mod tests {
     }
 
     #[test]
+    fn test_agentic_event_to_dtos_user_steering_injected_banner() {
+        let event = AgenticEvent::UserSteeringInjected {
+            session_id: "s1".into(),
+            turn_id: "t1".into(),
+            round_index: 0,
+            steering_id: "st1".into(),
+            content: "internal prompt steer".into(),
+            display_content: "Focus on error handling".into(),
+        };
+        let dtos = agentic_event_to_dtos(&event);
+        assert_eq!(dtos.len(), 1);
+        match &dtos[0] {
+            KernelEventDto::Banner { level, message } => {
+                assert!(matches!(level, BannerLevel::Info));
+                assert_eq!(message, "Focus on error handling");
+            }
+            other => panic!("expected Banner, got {:?}", other),
+        }
+
+        // S1: empty display_content mapped as-is without filtering
+        let empty_event = AgenticEvent::UserSteeringInjected {
+            session_id: "s1".into(),
+            turn_id: "t1".into(),
+            round_index: 1,
+            steering_id: "st2".into(),
+            content: "".into(),
+            display_content: "".into(),
+        };
+        let empty_dtos = agentic_event_to_dtos(&empty_event);
+        assert_eq!(empty_dtos.len(), 1);
+        match &empty_dtos[0] {
+            KernelEventDto::Banner { level, message } => {
+                assert!(matches!(level, BannerLevel::Info));
+                assert_eq!(message, "");
+            }
+            other => panic!("expected Banner, got {:?}", other),
+        }
+    }
+
+    #[test]
     fn test_agentic_event_to_dtos_intentional_drops() {
         let dropped_outer_events = vec![
             AgenticEvent::SessionCreated {
@@ -605,14 +645,6 @@ mod tests {
                     max_queue_wait_seconds: None,
                     session_concurrency_high: false,
                 },
-            },
-            AgenticEvent::UserSteeringInjected {
-                session_id: "s1".into(),
-                turn_id: "t1".into(),
-                round_index: 0,
-                steering_id: "st1".into(),
-                content: "steer".into(),
-                display_content: "steer".into(),
             },
             AgenticEvent::SessionModelAutoMigrated {
                 session_id: "s1".into(),
