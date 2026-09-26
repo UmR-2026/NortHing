@@ -24,7 +24,8 @@ async fn mcp_config_service_orchestration_preserves_load_save_delete_contract() 
         }),
     );
 
-    let service = MCPConfigService::new(store.clone());
+    let cred_store = Arc::new(InMemoryMcpCredentialStore::default());
+    let service = MCPConfigService::new(store.clone(), cred_store.clone());
 
     let loaded = service.load_all_configs().await.unwrap();
     assert_eq!(loaded.len(), 1);
@@ -37,21 +38,27 @@ async fn mcp_config_service_orchestration_preserves_load_save_delete_contract() 
         .unwrap();
     assert_eq!(
         updated.headers.get("Authorization").map(String::as_str),
-        Some("Bearer plain-token")
+        Some(MCP_AUTH_SENTINEL)
     );
 
     let saved_value = store.values.lock().await.get("mcp_servers").cloned().unwrap();
     assert_eq!(
         saved_value["mcpServers"]["remote-docs"]["headers"]["Authorization"],
-        "Bearer plain-token"
+        MCP_AUTH_SENTINEL
     );
     assert_eq!(
         saved_value["mcpServers"]["remote-docs"]["headers"]["X-Existing"],
         "kept"
     );
+    let account = mcp_remote_authorization_account("remote-docs");
+    assert_eq!(
+        cred_store.get(&account).await.unwrap(),
+        Some("Bearer plain-token".to_string())
+    );
 
     let cleared = service.clear_remote_authorization("remote-docs").await.unwrap();
     assert!(!cleared.headers.contains_key("Authorization"));
+    assert_eq!(cred_store.get(&account).await.unwrap(), None);
 
     service.delete_server_config("remote-docs").await.unwrap();
     let deleted_value = store.values.lock().await.get("mcp_servers").cloned().unwrap();
@@ -64,7 +71,7 @@ async fn mcp_config_service_orchestration_preserves_load_save_delete_contract() 
 
 #[tokio::test]
 async fn mcp_config_service_keeps_load_failures_as_empty_baseline() {
-    let service = MCPConfigService::new(Arc::new(FailingMCPConfigStore));
+    let service = MCPConfigService::new(Arc::new(FailingMCPConfigStore), Arc::new(NullMcpCredentialStore));
 
     let configs = service
         .load_all_configs()
@@ -94,7 +101,7 @@ async fn mcp_config_service_keeps_load_failures_as_empty_baseline() {
 #[tokio::test]
 async fn mcp_config_service_save_project_fails_closed_on_config_store_read_error() {
     let store = Arc::new(RecordingFailingGetMCPConfigStore::default());
-    let service = MCPConfigService::new(store.clone());
+    let service = MCPConfigService::new(store.clone(), Arc::new(NullMcpCredentialStore));
 
     let error = service
         .save_server_config(&make_mcp_config(
@@ -126,7 +133,7 @@ async fn mcp_config_service_save_project_fails_closed_on_unrecognized_existing_f
         .lock()
         .await
         .insert("project.mcp_servers".to_string(), json!(42));
-    let service = MCPConfigService::new(store.clone());
+    let service = MCPConfigService::new(store.clone(), Arc::new(NullMcpCredentialStore));
 
     let error = service
         .save_server_config(&make_mcp_config(
@@ -153,7 +160,7 @@ async fn mcp_config_service_save_project_fails_closed_on_unrecognized_existing_f
 #[tokio::test]
 async fn mcp_config_service_save_user_fails_closed_on_config_store_read_error() {
     let store = Arc::new(RecordingFailingGetMCPConfigStore::default());
-    let service = MCPConfigService::new(store.clone());
+    let service = MCPConfigService::new(store.clone(), Arc::new(NullMcpCredentialStore));
 
     let error = service
         .save_server_config(&make_mcp_config(
@@ -181,7 +188,7 @@ async fn mcp_config_service_save_user_fails_closed_on_config_store_read_error() 
 async fn mcp_config_service_save_user_fails_closed_on_unrecognized_existing_format() {
     let store = Arc::new(InMemoryMCPConfigStore::default());
     store.values.lock().await.insert("mcp_servers".to_string(), json!(42));
-    let service = MCPConfigService::new(store.clone());
+    let service = MCPConfigService::new(store.clone(), Arc::new(NullMcpCredentialStore));
 
     let error = service
         .save_server_config(&make_mcp_config(
@@ -208,7 +215,7 @@ async fn mcp_config_service_save_user_fails_closed_on_unrecognized_existing_form
 #[tokio::test]
 async fn mcp_config_service_delete_user_fails_closed_on_config_store_read_error() {
     let store = Arc::new(RecordingFailingGetMCPConfigStore::default());
-    let service = MCPConfigService::new(store.clone());
+    let service = MCPConfigService::new(store.clone(), Arc::new(NullMcpCredentialStore));
 
     let error = service
         .delete_server_config("user-server")
@@ -230,7 +237,7 @@ async fn mcp_config_service_delete_user_fails_closed_on_config_store_read_error(
 async fn mcp_config_service_delete_user_fails_closed_on_unrecognized_existing_format() {
     let store = Arc::new(InMemoryMCPConfigStore::default());
     store.values.lock().await.insert("mcp_servers".to_string(), json!(42));
-    let service = MCPConfigService::new(store.clone());
+    let service = MCPConfigService::new(store.clone(), Arc::new(NullMcpCredentialStore));
 
     let error = service
         .delete_server_config("user-server")
@@ -251,7 +258,7 @@ async fn mcp_config_service_delete_user_fails_closed_on_unrecognized_existing_fo
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn mcp_config_service_concurrent_user_saves_do_not_lose_entries() {
     let store = Arc::new(InMemoryMCPConfigStore::default());
-    let service = Arc::new(MCPConfigService::new(store.clone()));
+    let service = Arc::new(MCPConfigService::new(store.clone(), Arc::new(NullMcpCredentialStore)));
 
     let mut handles = Vec::new();
     for i in 0..10 {
@@ -309,7 +316,7 @@ async fn mcp_config_service_concurrent_user_save_and_delete_stay_consistent() {
         .lock()
         .await
         .insert("mcp_servers".to_string(), json!({ "mcpServers": initial }));
-    let service = Arc::new(MCPConfigService::new(store.clone()));
+    let service = Arc::new(MCPConfigService::new(store.clone(), Arc::new(NullMcpCredentialStore)));
 
     let mut handles = Vec::new();
     for i in 0..5 {
@@ -365,7 +372,7 @@ async fn mcp_config_service_concurrent_user_save_and_delete_stay_consistent() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn mcp_config_service_concurrent_project_saves_do_not_lose_entries() {
     let store = Arc::new(InMemoryMCPConfigStore::default());
-    let service = Arc::new(MCPConfigService::new(store.clone()));
+    let service = Arc::new(MCPConfigService::new(store.clone(), Arc::new(NullMcpCredentialStore)));
 
     let mut handles = Vec::new();
     for i in 0..10 {
@@ -424,7 +431,7 @@ async fn mcp_config_service_save_project_preserves_upsert_contract() {
             }
         ]),
     );
-    let service = MCPConfigService::new(store.clone());
+    let service = MCPConfigService::new(store.clone(), Arc::new(NullMcpCredentialStore));
 
     service
         .save_server_config(&make_mcp_config(
@@ -722,4 +729,47 @@ impl MCPConfigStore for RecordingFailingGetMCPConfigStore {
         self.set_calls.lock().await.push(key.to_string());
         Ok(())
     }
+}
+
+#[tokio::test]
+async fn mcp_config_service_set_remote_authorization_fails_closed_when_credential_store_fails() {
+    let store = Arc::new(InMemoryMCPConfigStore::default());
+    store.values.lock().await.insert(
+        "mcp_servers".to_string(),
+        json!({
+            "mcpServers": {
+                "remote-docs": {
+                    "type": "remote",
+                    "url": "https://example.com/mcp",
+                    "headers": {
+                        "X-Existing": "kept"
+                    }
+                }
+            }
+        }),
+    );
+
+    let cred_store = Arc::new(FailingMcpCredentialStore);
+    let service = MCPConfigService::new(store.clone(), cred_store);
+
+    let err = service
+        .set_remote_authorization("remote-docs", "plain-token")
+        .await
+        .expect_err("store failure must fail closed");
+    assert_eq!(err.kind(), MCPRuntimeErrorKind::Configuration);
+
+    // Verify disk has NOT been updated with sentinel or token
+    let saved_value = store.values.lock().await.get("mcp_servers").cloned().unwrap();
+    assert!(
+        saved_value["mcpServers"]["remote-docs"]["headers"]
+            .as_object()
+            .unwrap()
+            .get("Authorization")
+            .is_none(),
+        "disk must remain unchanged when credential store fails"
+    );
+    assert_eq!(
+        saved_value["mcpServers"]["remote-docs"]["headers"]["X-Existing"],
+        "kept"
+    );
 }

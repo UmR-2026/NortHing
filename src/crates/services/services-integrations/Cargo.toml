@@ -67,6 +67,7 @@ mcp = [
     "async-trait",
     "base64",
     "northhing-services-core",
+    "northhing-runtime-ports",
     "futures",
     "rand",
     "reqwest",

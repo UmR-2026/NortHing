@@ -101,6 +101,56 @@ pub async fn push_keyring_keys_into_core() {
     tracing::info!("Scheme C keyring push complete: {pushed} model key(s) resolved into core memory");
 }
 
+// ===== MCP Credential Store Adapter (W26-5, P1-8) =====
+
+// The CLI has no direct `northhing-runtime-ports` dependency; the port types
+// come through core's facade re-export (`northhing_core::runtime_ports`).
+use northhing_core::runtime_ports;
+
+/// CLI implementation of [`McpCredentialStore`] delegating to keyring operations.
+///
+/// Synchronous `keyring` crate calls inside the async trait are acceptable
+/// here (existing desktop precedent: the OS keyring is a fast in-process call).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct CliMcpCredentialStore;
+
+#[async_trait::async_trait]
+impl runtime_ports::McpCredentialStore for CliMcpCredentialStore {
+    async fn store(&self, account: &str, secret: &str) -> runtime_ports::PortResult<()> {
+        store_model_key(account, secret)
+            .map_err(|e| runtime_ports::PortError::new(runtime_ports::PortErrorKind::Backend, e.to_string()))
+    }
+
+    async fn get(&self, account: &str) -> runtime_ports::PortResult<Option<String>> {
+        keyring_get(account)
+            .map_err(|e| runtime_ports::PortError::new(runtime_ports::PortErrorKind::Backend, e.to_string()))
+    }
+
+    async fn delete(&self, account: &str) -> runtime_ports::PortResult<()> {
+        #[cfg(test)]
+        if mock_keyring::store(account, "") {
+            return Ok(());
+        }
+        let entry = keyring::Entry::new(KEYRING_SERVICE, account)
+            .map_err(|e| runtime_ports::PortError::new(runtime_ports::PortErrorKind::Backend, e.to_string()))?;
+        match entry.delete_credential() {
+            Ok(()) => Ok(()),
+            Err(keyring::Error::NoEntry) => Ok(()),
+            Err(e) => Err(runtime_ports::PortError::new(
+                runtime_ports::PortErrorKind::Backend,
+                e.to_string(),
+            )),
+        }
+    }
+}
+
+/// Register the CLI credential store into core.
+pub fn register_cli_mcp_credential_store() {
+    northhing_core::infrastructure::credentials::set_global_credential_store(std::sync::Arc::new(
+        CliMcpCredentialStore,
+    ));
+}
+
 /// Test-only in-memory keyring so unit tests never consult the OS keyring
 /// (red line: `cmdkey /list` output must be identical before and after a
 /// test run, and CI must not need a keyring backend). Thread-local + RAII

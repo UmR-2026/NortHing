@@ -1,6 +1,7 @@
 //! MCP configuration orchestration.
 
 use async_trait::async_trait;
+use northhing_runtime_ports::{mcp_remote_authorization_account, McpCredentialStore, MCP_AUTH_SENTINEL};
 use serde_json::Value;
 use std::sync::Arc;
 use tracing::{info, warn};
@@ -23,6 +24,7 @@ pub trait MCPConfigStore: Send + Sync {
 
 pub struct MCPConfigService {
     config_store: Arc<dyn MCPConfigStore>,
+    credential_store: Arc<dyn McpCredentialStore>,
     /// Serializes the read-modify-write windows of the mutating paths
     /// (`save_user_config`, `save_project_config`, `delete_server_config`).
     /// Without it, two concurrent saves/deletes on the same instance can both
@@ -34,9 +36,10 @@ pub struct MCPConfigService {
 }
 
 impl MCPConfigService {
-    pub fn new(config_store: Arc<dyn MCPConfigStore>) -> Self {
+    pub fn new(config_store: Arc<dyn MCPConfigStore>, credential_store: Arc<dyn McpCredentialStore>) -> Self {
         Self {
             config_store,
+            credential_store,
             write_lock: tokio::sync::Mutex::new(()),
         }
     }
@@ -193,11 +196,30 @@ impl MCPConfigService {
         let normalized = normalize_mcp_authorization_value(authorization_value)
             .ok_or_else(|| MCPRuntimeError::validation("Authorization value cannot be empty"))?;
 
+        let account = mcp_remote_authorization_account(server_id);
+        self.credential_store.store(&account, &normalized).await.map_err(|e| {
+            MCPRuntimeError::configuration(format!(
+                "Failed to store credential for MCP server '{}': {}",
+                server_id, e
+            ))
+        })?;
+
         remove_mcp_authorization_keys(&mut config.headers);
         remove_mcp_authorization_keys(&mut config.env);
-        config.headers.insert("Authorization".to_string(), normalized);
+        config
+            .headers
+            .insert("Authorization".to_string(), MCP_AUTH_SENTINEL.to_string());
 
-        self.save_server_config(&config).await?;
+        if let Err(e) = self.save_server_config(&config).await {
+            if let Err(del_err) = self.credential_store.delete(&account).await {
+                warn!(
+                    "Failed to rollback credential for MCP server '{}' after save failure: {}",
+                    server_id, del_err
+                );
+            }
+            return Err(e);
+        }
+
         Ok(config)
     }
 
@@ -212,6 +234,14 @@ impl MCPConfigService {
                 "MCP server '{}' is not a remote server",
                 server_id
             )));
+        }
+
+        let account = mcp_remote_authorization_account(server_id);
+        if let Err(e) = self.credential_store.delete(&account).await {
+            warn!(
+                "Failed to delete credential for MCP server '{}' from credential store: {}",
+                server_id, e
+            );
         }
 
         remove_mcp_authorization_keys(&mut config.headers);

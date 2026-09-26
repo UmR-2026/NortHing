@@ -7,6 +7,7 @@ pub mod ai;
 pub mod app_paths;
 #[cfg(feature = "ai-adapter-runtime")]
 pub mod cli_credentials;
+pub mod credentials;
 #[cfg(feature = "product-full")]
 pub mod debug_log;
 pub mod events;
@@ -17,6 +18,7 @@ pub mod storage;
 #[cfg(feature = "ai-adapter-runtime")]
 pub use ai::AIClient;
 pub use app_paths::{path_manager_arc, try_get_path_manager_arc, PathManager, StorageLevel};
+pub use credentials::*;
 pub use filesystem::{
     BatchedFileSearchProgressSink, FileContentSearchOptions, FileInfo, FileNameSearchOptions, FileOperationOptions,
     FileOperationService, FileReadResult, FileSearchOutcome, FileSearchProgressSink, FileSearchResult,

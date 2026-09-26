@@ -1,17 +1,47 @@
 use super::*;
 
 impl MCPServerManager {
-    async fn runtime_server_config(&self, server_id: &str) -> NortHingResult<MCPServerConfig> {
-        if let Some(config) = self.config_service.get_server_config(server_id).await? {
-            return Ok(config);
+    pub(super) async fn runtime_server_config(&self, server_id: &str) -> NortHingResult<MCPServerConfig> {
+        let mut config = if let Some(config) = self.config_service.get_server_config(server_id).await? {
+            config
+        } else {
+            self.ephemeral_configs
+                .read()
+                .await
+                .get(server_id)
+                .cloned()
+                .ok_or_else(|| NortHingError::NotFound(format!("MCP server config not found: {}", server_id)))?
+        };
+
+        if let Some(auth_val) = config.headers.get("Authorization") {
+            if auth_val == northhing_runtime_ports::MCP_AUTH_SENTINEL {
+                let store = crate::infrastructure::credentials::global_credential_store().ok_or_else(|| {
+                    NortHingError::Configuration(format!(
+                        "Credential store is not available to resolve authorization for MCP server '{}'",
+                        server_id
+                    ))
+                })?;
+                let account = northhing_runtime_ports::mcp_remote_authorization_account(server_id);
+                let secret = store
+                    .get(&account)
+                    .await
+                    .map_err(|e| {
+                        NortHingError::Configuration(format!(
+                            "Failed to retrieve credential for MCP server '{}': {}",
+                            server_id, e
+                        ))
+                    })?
+                    .ok_or_else(|| {
+                        NortHingError::Configuration(format!(
+                            "Credential not found in credential store for MCP server '{}'",
+                            server_id
+                        ))
+                    })?;
+                config.headers.insert("Authorization".to_string(), secret);
+            }
         }
 
-        self.ephemeral_configs
-            .read()
-            .await
-            .get(server_id)
-            .cloned()
-            .ok_or_else(|| NortHingError::NotFound(format!("MCP server config not found: {}", server_id)))
+        Ok(config)
     }
 
     /// Initializes all servers.

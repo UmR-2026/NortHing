@@ -100,6 +100,11 @@ pub fn startup_scale_factor() -> f64 {
 /// Returns `Err` if the launch setup itself fails (rare; usually a
 /// WebView2 runtime initialization failure on Windows).
 pub fn launch(on_shutdown: Arc<dyn Fn() + Send + Sync + 'static>) -> anyhow::Result<()> {
+    // Scheme C / P1-8 (W26-5): register desktop OS-keyring credential store into core.
+    // Reached through the `settings` re-export (`pub use keyring::*`) — the
+    // `keyring` module itself is private to `settings`.
+    crate::app_state::settings::register_desktop_mcp_credential_store();
+
     // Per the spike §2 conclusion + re-spike §3.2: every window must share
     // one user-data directory so the underlying WebView2 process pool is
     // reused. Without sharing we observed ~19 msedgewebview2.exe helper

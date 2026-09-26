@@ -9,6 +9,7 @@
 //! session_workspace, agent).
 
 pub mod agent;
+pub mod credentials;
 pub mod deep_research;
 pub mod lightweight_task;
 pub mod mcp;
@@ -16,6 +17,7 @@ pub mod port_core;
 pub mod session_workspace;
 
 pub use agent::*;
+pub use credentials::*;
 pub use deep_research::{
     renumber_research_report, ResearchCitationDisplayMapEntry, ResearchCitationRenumberOutput,
     ResearchCitationRenumberStats,

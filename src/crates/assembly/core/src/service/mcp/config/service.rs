@@ -80,9 +80,10 @@ impl MCPConfigService {
         let store = Arc::new(CoreMCPConfigStore {
             config_service: config_service.clone(),
         });
+        let cred_store = Arc::new(crate::infrastructure::credentials::GlobalCredentialStore::default());
         Ok(Self {
             config_service,
-            inner: northhing_services_integrations::mcp::config::MCPConfigService::new(store),
+            inner: northhing_services_integrations::mcp::config::MCPConfigService::new(store, cred_store),
         })
     }
 

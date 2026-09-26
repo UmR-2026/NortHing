@@ -249,11 +249,7 @@ pub fn delete_api_key(keyring: &dyn KeyringBackend, provider_id: &str) -> Result
 /// ## Errors
 ///
 /// Returns `Err` when the keyring is unavailable (fail-closed) or serialization fails.
-pub fn store_env(
-    keyring: &dyn KeyringBackend,
-    server_id: &str,
-    env: &HashMap<String, String>,
-) -> Result<String> {
+pub fn store_env(keyring: &dyn KeyringBackend, server_id: &str, env: &HashMap<String, String>) -> Result<String> {
     if is_env_sentinel(env) {
         return Ok(MCP_ENV_SENTINEL.to_string());
     }
@@ -290,6 +286,82 @@ pub fn load_env(keyring: &dyn KeyringBackend, server_id: &str) -> Result<HashMap
             Ok(HashMap::new())
         }
     }
+}
+
+// ===== MCP Credential Store Adapter (W26-5, P1-8) =====
+
+/// True when an anyhow-wrapped keyring failure bottoms out at
+/// [`keyring::Error::NoEntry`] (credential not found).
+///
+/// `keyring::Error` doesn't implement `PartialEq`, so equality must go
+/// through pattern matching on the downcasted root cause rather than `==`.
+/// The root-cause downcast is reliable here because [`ProductionKeyring`]
+/// wraps the raw `keyring::Error` via `anyhow::context` (anyhow's `Display`
+/// only renders the outermost context message, so string sniffing would
+/// never see "NoEntry").
+fn is_no_entry(err: &anyhow::Error) -> bool {
+    matches!(
+        err.root_cause().downcast_ref::<keyring::Error>(),
+        Some(keyring::Error::NoEntry)
+    )
+}
+
+/// Desktop implementation of [`McpCredentialStore`] delegating to [`PRODUCTION_KEYRING`].
+///
+/// Synchronous `keyring` calls inside the async trait are acceptable here
+/// (existing desktop precedent: the OS keyring is a fast in-process call).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct DesktopMcpCredentialStore;
+
+#[async_trait::async_trait]
+impl northhing_runtime_ports::McpCredentialStore for DesktopMcpCredentialStore {
+    async fn store(&self, account: &str, secret: &str) -> northhing_runtime_ports::PortResult<()> {
+        PRODUCTION_KEYRING.store(account, secret).map_err(|e| {
+            northhing_runtime_ports::PortError::new(
+                northhing_runtime_ports::PortErrorKind::Backend,
+                format!("Failed to store credential: {e}"),
+            )
+        })
+    }
+
+    async fn get(&self, account: &str) -> northhing_runtime_ports::PortResult<Option<String>> {
+        match PRODUCTION_KEYRING.get(account) {
+            Ok(secret) => Ok(Some(secret)),
+            Err(err) => {
+                if is_no_entry(&err) {
+                    Ok(None)
+                } else {
+                    Err(northhing_runtime_ports::PortError::new(
+                        northhing_runtime_ports::PortErrorKind::Backend,
+                        format!("Failed to get credential: {err}"),
+                    ))
+                }
+            }
+        }
+    }
+
+    async fn delete(&self, account: &str) -> northhing_runtime_ports::PortResult<()> {
+        match PRODUCTION_KEYRING.delete(account) {
+            Ok(()) => Ok(()),
+            Err(err) => {
+                if is_no_entry(&err) {
+                    Ok(())
+                } else {
+                    Err(northhing_runtime_ports::PortError::new(
+                        northhing_runtime_ports::PortErrorKind::Backend,
+                        format!("Failed to delete credential: {err}"),
+                    ))
+                }
+            }
+        }
+    }
+}
+
+/// Register the desktop credential store into core.
+pub fn register_desktop_mcp_credential_store() {
+    northhing_core::infrastructure::credentials::set_global_credential_store(std::sync::Arc::new(
+        DesktopMcpCredentialStore,
+    ));
 }
 
 #[cfg(test)]
@@ -405,7 +477,10 @@ mod tests {
         let sentinel_map = make_env_sentinel();
         let result = store_env(&kr, "srv1", &sentinel_map).unwrap();
         assert_eq!(result, MCP_ENV_SENTINEL);
-        assert!(kr.get("mcp-env:srv1").is_err(), "sentinel map must not be written to keyring");
+        assert!(
+            kr.get("mcp-env:srv1").is_err(),
+            "sentinel map must not be written to keyring"
+        );
     }
 
     #[test]

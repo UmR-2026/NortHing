@@ -379,6 +379,7 @@ async fn initialize_core_services(
 
     // Scheme C: resolve OS-keyring keys into core memory before any AI client is built.
     keyring_keys::push_keyring_keys_into_core().await;
+    keyring_keys::register_cli_mcp_credential_store();
 
     // Save and override tool confirmation setting
     let config_service = northhing_core::service::config::get_global_config_service().await.ok();

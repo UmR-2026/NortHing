@@ -32,7 +32,7 @@ Plan §1：
 
 ## 2. 编排者预检结论（逐项钉死，直接采信）
 
-BASE = `434f9a4`。
+BASE = `831094c`。
 
 | 事实 | 证据 |
 |---|---|
@@ -74,7 +74,7 @@ BASE = `434f9a4`。
 
 ## 6. 验证（命令 + 输出原文进 report）
 
-BASE 全 sha = `434f9a4`（下文 `<BASE>`）。
+BASE 全 sha = `831094c`（下文 `<BASE>`）。
 
 1. `rustup run stable-x86_64-pc-windows-msvc cargo check --workspace` → 0 error
 2. `rustup run stable-x86_64-pc-windows-msvc cargo test -p northhing-services-integrations --features mcp` → 绿（含更新后的断言与新用例；**必须带 `--features mcp`**，裸跑测试被 cfg-out 为 0 tests，W15-1f 实证）
@@ -91,7 +91,7 @@ BASE 全 sha = `434f9a4`（下文 `<BASE>`）。
 
 ## 8. 派发元信息
 
-- BASE: `434f9a4`
+- BASE: `831094c`
 - 允许文件集：
   - `src/crates/contracts/runtime-ports/src/credentials.rs`（新建）+ `src/crates/contracts/runtime-ports/src/lib.rs`
   - `src/crates/services/services-integrations/Cargo.toml`（**仅限** `mcp` feature 列表加 `"northhing-runtime-ports"` 一行）

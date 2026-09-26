@@ -1,6 +1,9 @@
 #![allow(dead_code, unused_imports)]
 
 pub use async_trait::async_trait;
+pub use northhing_runtime_ports::{
+    mcp_remote_authorization_account, McpCredentialStore, NullMcpCredentialStore, MCP_AUTH_SENTINEL,
+};
 pub use serde_json::json;
 pub use std::path::PathBuf;
 pub use std::sync::{Arc, Mutex};
@@ -115,5 +118,56 @@ pub struct FakeMCPToolCatalogClient {
 impl MCPToolCatalogClient for FakeMCPToolCatalogClient {
     async fn list_mcp_tools(&self) -> MCPRuntimeResult<Vec<MCPTool>> {
         Ok(self.tools.clone())
+    }
+}
+
+#[derive(Default, Clone)]
+pub struct InMemoryMcpCredentialStore {
+    pub entries: Arc<tokio::sync::Mutex<HashMap<String, String>>>,
+}
+
+#[async_trait::async_trait]
+impl McpCredentialStore for InMemoryMcpCredentialStore {
+    async fn store(&self, account: &str, secret: &str) -> northhing_runtime_ports::PortResult<()> {
+        self.entries
+            .lock()
+            .await
+            .insert(account.to_string(), secret.to_string());
+        Ok(())
+    }
+
+    async fn get(&self, account: &str) -> northhing_runtime_ports::PortResult<Option<String>> {
+        Ok(self.entries.lock().await.get(account).cloned())
+    }
+
+    async fn delete(&self, account: &str) -> northhing_runtime_ports::PortResult<()> {
+        self.entries.lock().await.remove(account);
+        Ok(())
+    }
+}
+
+pub struct FailingMcpCredentialStore;
+
+#[async_trait::async_trait]
+impl McpCredentialStore for FailingMcpCredentialStore {
+    async fn store(&self, _account: &str, _secret: &str) -> northhing_runtime_ports::PortResult<()> {
+        Err(northhing_runtime_ports::PortError::new(
+            northhing_runtime_ports::PortErrorKind::Backend,
+            "credential store backend simulated failure",
+        ))
+    }
+
+    async fn get(&self, _account: &str) -> northhing_runtime_ports::PortResult<Option<String>> {
+        Err(northhing_runtime_ports::PortError::new(
+            northhing_runtime_ports::PortErrorKind::Backend,
+            "credential store backend simulated failure",
+        ))
+    }
+
+    async fn delete(&self, _account: &str) -> northhing_runtime_ports::PortResult<()> {
+        Err(northhing_runtime_ports::PortError::new(
+            northhing_runtime_ports::PortErrorKind::Backend,
+            "credential store backend simulated failure",
+        ))
     }
 }
