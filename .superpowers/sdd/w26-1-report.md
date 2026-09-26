@@ -82,6 +82,8 @@ Attempt verification passed: all modified files are within allowlist.
 
 GATE_EXIT=0。无 unfulfilled/out-of-bounds 告警。
 
+**并行 interleave 三窗复核（brief §6.5 "窗口内出现其它 W26 单文件停手报编排者"条款触发，未私扩 allowlist）**：本单 A=`bf1df10` 与 B（报告回填）之间，兄弟 W26-5 的 `92fa7a4`/`1ef1b16`（其 report/allowlist）落入，故全窗 `03ecda0..B` gate 报 2 个 out-of-bounds（均为 w26-5 文件——与本单无关，w26-5 自家 commit message 亦记录了对我方 interleave 的对称 red）。分窗证据：W1 `03ecda0..bf1df10` exit 0（上方原文）；W2 `1ef1b16..<B-tip>` exit 0（仅 report 回填，6 条 unfulfilled=code 文件已由 W1 覆盖）；**请编排者波收口用全波 allowlist 复跑总窗**。
+
 ## 4. 疑虑
 
 - **宿主树 §6.2 污染**：brief §6.2 预设宿主树可直跑，实际被并行兄弟（W26-5）未提交的 `mcp/server/manager/tests.rs`（TestCoreCredStore 新夹具，HashMap/Arc/MCPServerManager 未导入 → E0425/E0433/E0422）打挂 `northhing-core (lib test)` 编译。同现象 w26-3/w26-4 report 疑虑节已有先例记录。处置：按兄弟先例转入 BASE clean worktree 验证，未触碰兄弟文件。
@@ -96,6 +98,6 @@ GATE_EXIT=0。无 unfulfilled/out-of-bounds 告警。
 
 - AC1 facade 映射 ✓ / AC2 钉死测试（新用例 + drops 清单移除）✓ / AC3 CLI chat（门控照先例）+ exec 双臂同英文文案 ✓ / AC4 desktop 零改动（app.rs:216-220 证据见 §1）✓ / AC5 §6 五项验证全绿（输出原文见 §3）✓
 - S1-S6 逐条满足：S5 复核仅 UserSteeringInjected 一个事件接线；S6 仅 agentic.rs:296 注释一行；禁区未触碰（gate 机械复核 exit 0）。
-- Commit：A = `bf1df10`（feat(events): W26-1，7 文件，base `03ecda0`）；B = 本报告输出回填 commit（仅 `w26-1-report.md`，allowlist 内）。
+- Commit：A = `bf1df10`（feat(events): W26-1，7 文件，base `03ecda0`）；B = `746399b`（报告输出回填，仅 `w26-1-report.md`）；C = 本报告三窗 gate 证据补记 commit（仅 `w26-1-report.md`，均在 allowlist 内）。
 - 宵禁余量：本轮完成于 22 时档，03:00 前无风险。
 - 疑虑节三条均为环境/操作观察（不阻塞正确性）：宿主 WIP 污染 §6.2 直跑预设、验证 worktree 路径残留复用脏 checkout、clean 树缺 i18n gitignored 生成物——后两条建议编排者纳入波次 worktree 卫生清单。
