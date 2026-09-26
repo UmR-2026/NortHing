@@ -1,0 +1,9 @@
+src/crates/services/services-core/src/session/dialog_turn.rs
+src/crates/assembly/core/src/agentic/session/session_persistence/turn_lifecycle.rs
+src/crates/assembly/core/src/agentic/session/session_persistence/save.rs
+src/crates/assembly/core/src/agentic/coordination/dialog_turn/turn_persist.rs
+src/crates/assembly/core/src/agentic/episodes/distill.rs
+src/crates/assembly/core/src/service/session_usage/service.rs
+.superpowers/sdd/w26-2-brief.md
+.superpowers/sdd/w26-2-report.md
+.superpowers/sdd/w26-2-allowlist.txt
