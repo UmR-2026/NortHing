@@ -1,6 +1,6 @@
 # NortHing
 
-A general-purpose agent application with a Slint-based desktop interface. The IDE/CLI/coding capabilities are tools for the agent — not a human-facing IDE.
+An **agent-first growth container** — see [`docs/product/charter.md`](docs/product/charter.md). The desktop app is a vessel where an agent (「北」) grows; humans intervene by speech only, memory and logs are inviolable by human hands, and total destruction is the only absolute human power. The IDE/CLI/coding capabilities are tools for the agent — not a human-facing IDE.
 
 ## Install
 
@@ -22,7 +22,7 @@ See [`northing-installer/README.md`](northing-installer/README.md) for details.
 ## Development
 
 ```bash
-pnpm run desktop:dev          # build and run Slint desktop app (cold start)
+pnpm run desktop:dev          # build and run Dioxus consult-room desktop app (cold start)
 pnpm run desktop:check        # compile check only
 pnpm run cli:dev              # run CLI (frozen surface)
 pnpm run installer:build      # build installer
@@ -39,7 +39,7 @@ See [`AGENTS.md`](AGENTS.md) for the layered module index, backbone invariants, 
 
 See [`docs/status/surfaces.md`](docs/status/surfaces.md) for the complete ledger of shipping vs frozen-experimental surfaces.
 
-**Shipping (v0.1.0)**: Slint desktop + installer.  
+**Shipping (v0.1.0)**: Dioxus desktop (consult-room) + installer.  
 **Frozen-experimental**: CLI, server, SDLC harness.
 
 ## Tech Debt

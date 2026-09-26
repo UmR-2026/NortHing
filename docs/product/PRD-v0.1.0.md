@@ -2,6 +2,7 @@
 
 > **版本**: 0.1.0-draft  
 > **日期**: 2026-06-18  
+> **⚠️ 历史文档（2026-09-26）**：产品目标已由 [`docs/product/charter.md`](charter.md)（容器宪章）取代——本文的产品形态承诺（Slint + Material 等）已过时，仅作历史参考；架构现状见 `docs/architecture/agent-kernel-northstar.md` 与 `docs/status/surfaces.md`。
 > **状态**: A3/A5 完成，重新审视产品方向后更新  
 > **路径**: `docs/product/PRD-v0.1.0.md`
 

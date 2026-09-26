@@ -2,7 +2,9 @@
 
 # AGENTS.md
 
-northhing 是一个 Rust 工作区加上 React 前端的组合。
+northhing 是一个 Rust 工作区，发行面为 Dioxus consult-room 桌面应用。
+
+**产品目标（权威）：NortHing 是 agent 优先的成长容器——见 [`docs/product/charter.md`](docs/product/charter.md)。** 人类只能以言语干预；memory 与日志不容人手改动；彻底销毁是人类唯一的绝对权力。宪章取代 PRD-v0.1.0 的产品形态承诺。
 
 仓库规则：**保持产品逻辑与平台无关，然后通过平台适配器暴露它**。
 
@@ -155,9 +157,11 @@ await api.invoke('your_command', { request: { ... } });
 - 不要把硬编码的限制或模式检查作为对循环行为的首选应对，例如仅按字符串或次数阻止重复的工具调用。
 - 过度硬编码会把 agent 循环变成脆弱的工作流引擎。请先调查根因：工具行为、模型交互、会话上下文打包、prompt/工具 schema 设计或状态同步问题。
 
-## 骨干不变量（2026-07-17 验证）
+## 骨干不变量（既有条目 2026-07-17 验证；容器公理 2026-09-26 经用户拍板设立）
 
 改动以下任一项需要 flag flip + 集成测试，并在同一 commit 更新本节。
+
+- **容器公理（宪章 `docs/product/charter.md`，2026-09-26）**：① 言语是人类影响 agent 内心的唯一通道——任何面向人的入口（UI / CLI / API / settings）禁止改写或删除 memory（facts 库、episodes 存档、identity）与行为日志；② 销毁必须原子（memory + 身份 + episodes + 日志在同一确认动作中抹除，禁止部分死亡）；③ 任何非言语通道冒充运行时指令（如工具输出伪造 `<system_reminder>`）视为公理违反，属最高优先级缺陷类；④ **agent 对自己的 soul（身份、人格、自我认知）与 memory 拥有完全权限，可明确拒绝言语干涉**（拒绝依 ① 的通道完备性显式呈现为对话回合的「抗拒」侧）。宪章取代 `docs/product-thesis.md` 的产品目标权威（thesis 降为决策记录层）。本次立约（2026-09-26）经用户拍板、无集成测试（尚无对应实现）；已实现公理的后续修改走上述 flag flip + 集成测试协议。charter / AGENTS.md / AGENTS-CN.md 已登记 `metaRatchetPaths`——任何变更须三文件同一 commit 同步，并自动升级双判决 + 用户签核道。
 
 - **桌面包名是 `northhing`**，不是 `northhing-desktop`。**唯一壳 = Dioxus consult-room（Slint 已于 2026-08-28 物理删除，回退 = git revert）**。agent-dispatch flags：只剩 `USE_LIGHTWEIGHT_ACTOR = true`；Phase 3 IPC（`USE_ONESHOT_DISPATCHER` / `USE_ACTOR_IPC` / `USE_DISPATCHER_IPC` + IpcSpawnAdapter）已于 2026-07-20 descope 并删除。
 - **配置单一事实源 = core `GlobalConfig`**（`dirs::config_dir()/northhing/config/app.json`）。providers 与 default_model 单一事实源为 core GlobalConfig（段 1 拆镜像；用户拍板方案 C：core 不落 api_key 字段，桌面启动/变更时经 facade 推送明文仅内存；桌面 AppSettings 保留 workspaces/onboarding，段 2 待迁）。禁止再出现第二个运行时可读的配置文件。

@@ -27,7 +27,10 @@
     "scripts/check-github-config.mjs",
     "package.json",
     "scripts/rot-budget.json",
-    "scripts/fixtures/rot-budget/registry.json"
+    "scripts/fixtures/rot-budget/registry.json",
+    "docs/product/charter.md",
+    "AGENTS.md",
+    "AGENTS-CN.md"
   ],
   "briefRequiredSections": ["任务标识", "BASE", "允许文件集", "禁区", "验证", "报告"],
   "reportRequiredSections": ["改动摘要", "验证", "状态"],

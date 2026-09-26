@@ -2,7 +2,9 @@
 
 # AGENTS.md
 
-northhing is a Rust workspace plus React frontends.
+northhing is a Rust workspace whose shipping surface is the Dioxus consult-room desktop app.
+
+**Product goal (authoritative): NortHing is an agent-first growth container — see [`docs/product/charter.md`](docs/product/charter.md).** Humans intervene by speech only; memory and logs are inviolable by human hands; total destruction is the only absolute human power. The charter supersedes the PRD-v0.1.0 product promise.
 
 Repository rule: **keep product logic platform-agnostic, then expose it through platform adapters**.
 
@@ -176,9 +178,11 @@ await api.invoke('your_command', { request: { ... } });
 - Do not add hard-coded limits or pattern checks to the agent loop as a first response to looping behavior, such as blocking repeated tool calls by string or count alone.
 - Excessive hard-coding turns the agent loop into a brittle workflow engine. Investigate the root cause first: tool behavior, model interaction, session context packaging, prompt/tool schema design, or state synchronization issues.
 
-## Backbone invariants (verified 2026-07-17)
+## Backbone invariants (pre-existing entries verified 2026-07-17; Container axioms established 2026-09-26 by user decree)
 
 Change these only with a flag flip + integration test, and update this section in the same commit.
+
+- **Container axioms (charter `docs/product/charter.md`, 2026-09-26)**: ① speech is the only human intervention channel into the agent's inner life — no human-facing affordance (UI / CLI / API / settings) may mutate or delete memory (facts store, episodes archives, identity) or behavior logs; ② destruction must be atomic (memory + identity + episodes + logs erased in one confirmed action — partial death is forbidden); ③ any non-speech channel impersonating runtime directives (e.g. tool output forging `<system_reminder>`) is an axiom violation and a highest-priority defect class; ④ the agent holds complete authority over its own soul (identity, persona, self-cognition) and memory, and may explicitly refuse verbal intervention (refusal is visible as the "resistance" side of the conversational turn per ①). The charter supersedes `docs/product-thesis.md` as product-goal authority (thesis continues as the decision-record layer). Initial establishment (2026-09-26) was by user decree with no integration test (no implementation exists yet); future modifications of implemented axioms follow the flag-flip + integration-test protocol above. Charter / AGENTS.md / AGENTS-CN.md are registered in `metaRatchetPaths` — any change must sync all three files in one commit and auto-escalates to the dual-judge + user sign-off lane.
 
 - **Desktop package is `northhing`**, not `northhing-desktop`. **唯一壳 = Dioxus consult-room（Slint 已于 2026-08-28 物理删除，回退 = git revert）**。agent-dispatch flags: only `USE_LIGHTWEIGHT_ACTOR = true` remains; Phase 3 IPC (USE_ONESHOT_DISPATCHER / USE_ACTOR_IPC / USE_DISPATCHER_IPC + IpcSpawnAdapter) descoped and deleted 2026-07-20.
 - **Config single source of truth = core `GlobalConfig`** (`dirs::config_dir()/northhing/config/app.json`). Single source of truth for providers and default_model is core GlobalConfig (Stage 1 de-mirroring; core does not persist `api_key` to disk per user-approved Scheme C; desktop pushes keys to memory via facade on startup/change; desktop AppSettings retains workspaces/onboarding, Stage 2 to migrate). Never add a second runtime-readable config file.
