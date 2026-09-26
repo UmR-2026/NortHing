@@ -77,7 +77,7 @@
 - **Symptom**: `MCPServerConfig.env` (`HashMap<String, String>`) stores environment variables for stdio subprocesses as plaintext in `app.json`. These env vars commonly carry credentials (e.g. `OPENAI_API_KEY=sk-xxx`, `AWS_ACCESS_KEY_ID=...`), creating the same plaintext-on-disk risk as P1-2.
 - **Evidence**: originally `src/apps/desktop/src/app_state/settings/types.rs` `MCPServerConfig.env` in desktop `app.json`. **Stale after K4a** (2026-08-26): Settings/MCP reads `kernel_facade().list_mcp_servers()`; production env plaintext is Cursor-format `mcp_servers` via `src/crates/services/services-integrations/src/mcp/config/cursor_format.rs` (`config_to_cursor_format` writes `env` as JSON). Desktop `AppSettings.mcp_servers` has no production writer.
 - **Proposed fix**: Defer to a future wave — the same `KeyringBackend` pattern from P1-2 (C3) can be reused: a per-variable sentinel or a single keyring entry per MCP server holding the full env block. C3 scope is strictly `ProviderConfig.api_key`; this concern is registered per brief §7 ("发现即登记，不擅自改"). Must target the core Cursor-format persist path, not desktop AppSettings.
-- **Status**: active (discovered by C3 review 2026-08-04, registered as concern per brief §7). P1c (2026-08-26) implemented keyring on `AppSettings.mcp_servers` per prescription v3; user ruled **do not flip resolved** because that field is dead.
+- **Status**: active (discovered by C3 review 2026-08-04, registered as concern per brief §7). P1c (2026-08-26) implemented keyring on `AppSettings.mcp_servers` per prescription v3; user ruled **do not flip resolved** because that field is dead. P1-8 partial（W26-5, 2026-09-26）：remote authorization 已走 McpCredentialStore port + 磁盘哨兵化 + 运行时解析（fail-closed）；MCP env 明文哨兵化与存量数据迁移缓办（C2 更大范围在案）。
 
 ### P1-6: DeleteFileTool needs_permissions()=false — 删除（含 remote rm -rf）绕过确认门
 
@@ -100,7 +100,7 @@
 - **Symptom**: No single-instance / lock file mechanism in desktop app. Two instances share `~/.northhing/config/app.json` — last write wins, session state conflicts.
 - **Evidence**: Search `single.*instance|lock.*file|already.*running` in `src/apps/desktop/` returns no matches. `save_app_settings` does not use `FILE_LOCKS` from persistence.rs.
 - **Proposed fix**: (1) Create lock file on startup (`~/.northhing/app.lock`). (2) Or use single-instance plugin. (3) Make `save_app_settings` use file lock.
-- **Status**: active
+- **Status**: resolved (2026-09-26, W26-3: desktop single-instance lock via Win32 named mutex in Local\ namespace; duplicate launch rejected with exit 1)
 
 ### P2-3: Context compression has no visible marker
 
@@ -121,7 +121,7 @@
 - **Symptom**: `DialogTurnFailed` event handled in event_bridge.rs (sets temporary error) and run.rs (displays error), but failure reason is not persisted to conversation history. After refresh, the failure is invisible.
 - **Evidence**: `event_bridge.rs:222-260` — `set_session_error` + `set_inline_error`, not written to message list. `turn_persist.rs` persists turn metadata but not failure reason in message list.
 - **Proposed fix**: (1) Insert failure reason as system message in conversation history. (2) Mark failed assistant messages with error badge. (3) CLI: show `[失败] {error}` in history rendering.
-- **Status**: active
+- **Status**: resolved (2026-09-26, W26-2: failed dialog turns persist AiErrorDetail as sibling optional `error_detail` on DialogTurnData (serde bidirectional compat, token_usage precedent); build_messages_from_turns synthesizes an `[Error: 类别: provider_message]` assistant message for Error turns without text/thinking output, so failures survive refresh on both surfaces via the shared rebuild path; legacy detail-less Error turns stay skipped — no stock migration, accepted phase 1)
 
 ### P2-6: Event queue silently drops events when full
 
@@ -213,7 +213,7 @@
 - **Symptom**: the uninstall path (fixed in FU-2 so it stops servers by resolved language keys) is currently unreachable from production code — only tests call it.
 - **Evidence**: Task B2 review observation + Wave1 final review §5 (2026-08-06), commit `7a4bdca`.
 - **Proposed fix**: either wire plugin uninstall into the product surface or record it explicitly as an API kept for a planned surface; also note `stop_server` always returns `Ok`, which makes the new warn branch unreachable.
-- **Status**: active (low priority)
+- **Status**: resolved (2026-09-26, W26-4: uninstall_plugin reserved annotation added; unreachable Err branches for stop_server in manager.rs:130 and manager.rs:302 cleaned to warn-and-continue semantics)
 
 ### P2-19: `src/apps/server/README.md:5-10` 包含 3 条指向已删 relay-server 的悬空链接
 
