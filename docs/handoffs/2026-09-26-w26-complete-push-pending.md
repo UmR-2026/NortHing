@@ -58,3 +58,9 @@
 
 - 推送+CI 盯梢：`ci_logs` 插件 / gh CLI 全路径。
 - W27 规划：`writing-plans`；宜居性产出并入需求源。
+
+## 8. 终账补记（2026-09-26 23:1x，本 session 收口）
+
+- **推送完成**：`3e9f4b5..dcf5987`（26 commit）→ origin/main。中断插曲：GitHub 国际出口断连约 40 分钟（代理节点问题，用户切节点恢复）；期间网络诊断留档 episode。
+- **两个 AWC 全部关账**：① W26-3 AWC = CI 复跑 ✅（run `36249741345` 9/9 success）；② W26-4 AWC = 隔离树 lsp 复证 ✅（`cargo test -p northhing-core --features product-full --lib lsp` @ dcf5987 隔离树，15 passed / 0 failed / 1.08s，i18n 生成物先补）。
+- 本 handoff §1 的 1/2 两项已完成，剩余 3/4（宜居性消费、W27 规划）为下一 session 任务。**W26 波终态：全部闭环、零遗留、远端同步。**
