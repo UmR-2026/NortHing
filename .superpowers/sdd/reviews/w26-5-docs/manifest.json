@@ -1,0 +1,30 @@
+{
+  "base": "bf1df10",
+  "tip": "1ef1b16",
+  "allowlist": ".superpowers/sdd/w26-5-allowlist.txt",
+  "allowlistSha256": "b620aab89837788c2b911703946406f68757ce399518a4512eb178e976d7427a",
+  "allowlistBytes": 916,
+  "toolHashes": {
+    "assemble-review-package.mjs": "85eb443b1cd295ca75fe628921d6967b62ebece2d78b0b97d2ac0cf7338efe94",
+    "verify-task-gate.mjs": "35f11f64e33d664550addfc8b4f9564e2f1ee39a826283aa458c503aa1b9e2f6"
+  },
+  "diffSha256": "762e9b81953c7ce1845e7a9c782de2c4c4b1a8914dbe5d9b7bf048a1ea7e4c3d",
+  "materials": {
+    "brief": {
+      "path": ".superpowers/sdd/w26-5-brief.md",
+      "sha256": "dbf1d97f833ae4899c0b9fa2aa97c4fd60ccaf3a7da11242591a8a513ae2418f",
+      "bytes": 14628
+    },
+    "diff": {
+      "path": "E:\\agent-project\\northing\\.superpowers\\sdd\\reviews\\w26-5-docs\\review.diff",
+      "sha256": "762e9b81953c7ce1845e7a9c782de2c4c4b1a8914dbe5d9b7bf048a1ea7e4c3d",
+      "bytes": 15834
+    },
+    "report": {
+      "path": ".superpowers/sdd/w26-5-report.md",
+      "sha256": "18a414ae0c77f23724b64e2871199751fedadb1997a37ed65508cd739c6a5dcb",
+      "bytes": 14345
+    }
+  },
+  "assembledAt": "2026-09-26T13:49:01.192Z"
+}

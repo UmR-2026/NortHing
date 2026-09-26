@@ -96,7 +96,50 @@ error: could not compile `northhing-core` (lib test) due to 15 previous errors; 
 green 证据替代链（同一 TIP1 代码）：
 
 1. §6.0 宿主 `cargo check -p northhing-core --features product-full`（非测试编译）exit 0；
-2. 隔离树（BASE+TIP1，无兄弟 WIP）过滤测试复跑：报告 commit（TIP2）时该复跑仍在编译（宿主同 target 被兄弟编译排队拖住，属并行预期），结果按纪律追加至文末「commit 后追加」节——免费池铁律：只贴实际输出，不预写结论。
+2. 隔离树（BASE+TIP1，无兄弟 WIP）过滤测试复跑 —— 绿（首次链式命令把 `--target-dir` 误置于 `--` 后被 libtest 拒绝，二进制编译成功后按 long-running-shell 规则 2 直跑测试二进制补完）：
+
+```text
+running 37 tests
+test agentic::episodes::distill::tests::distill_with_no_tools ... ok
+test agentic::episodes::distill::tests::error_message_truncation ... ok
+test agentic::session::session_persistence::save::tests::test_build_messages_error_turn_fallback_category_description ... ok
+test agentic::session::session_persistence::save::tests::test_build_messages_error_turn_with_detail_synthesizes_error_message ... ok
+test agentic::episodes::distill::tests::repair_content_from_input_when_no_result_for_assistant ... ok
+test agentic::episodes::distill::tests::distill_with_repair_across_rounds ... ok
+test agentic::episodes::distill::tests::distill_with_failure_no_repair ... ok
+test agentic::episodes::distill::tests::distill_with_tools ... ok
+test service::session_usage::tracking::tests::cache_hit_rate_excludes_unreported_records_from_denominator ... ok
+test service::session_usage::tracking::tests::cache_hit_rate_computes_when_all_records_report_cache ... ok
+test service::session_usage::tracking::tests::cache_hit_rate_is_none_when_no_record_reports_cache ... ok
+test service::session_usage::tracking::tests::cache_hit_rate_none_when_input_sum_is_zero ... ok
+test agentic::session::session_persistence::save::tests::test_build_messages_error_turn_without_detail_is_skipped ... ok
+test service::session_usage::tracking::tests::per_model_cache_hit_rate_isolated_per_model ... ok
+test service::session_usage::persist::tests::report_uses_persisted_model_span_facts_without_token_records ... ok
+test service::session_usage::tracking::tests::report_scopes_by_workspace_identity ... ok
+test service::session_usage::persist::tests::remote_workspace_without_snapshot_marks_file_stats_partial ... ok
+test service::session_usage::persist::tests::report_marks_remote_snapshot_stats_partial ... ok
+test service::session_usage::persist::tests::aggregates_operation_summary_file_stats_without_reading_file_bodies ... ok
+test service::session_usage::tracking::tests::report_counts_failed_and_cancelled_tool_duration_when_available ... ok
+test service::session_usage::tracking::tests::report_uses_cached_tokens_when_provider_reports_them ... ok
+test service::session_usage::persist::tests::file_rows_preserve_operation_turn_and_session_scopes ... ok
+test service::session_usage::aggregation::tests::report_merges_legacy_model_timing_into_token_model_row_for_same_turn ... ok
+test service::session_usage::tracking::tests::report_computes_tool_p95_only_with_multiple_duration_spans ... ok
+test service::session_usage::aggregation::tests::report_excludes_local_command_turns_from_usage_metrics ... ok
+test service::session_usage::aggregation::tests::report_adds_turn_anchors_to_slowest_spans ... ok
+test service::session_usage::aggregation::tests::report_active_runtime_uses_active_span_union ... ok
+test service::session_usage::aggregation::tests::report_adds_representative_anchors_to_model_tool_and_error_rows ... ok
+test service::session_usage::tracking::tests::report_marks_cache_unavailable_for_zero_filled_cache_source ... ok
+test service::session_usage::aggregation::tests::report_uses_clear_label_when_model_identity_is_missing ... ok
+test service::session_usage::aggregation::tests::report_includes_error_examples_for_failed_turns_and_tools ... ok
+test service::session_usage::persist::tests::remote_workspace_uses_wrapped_tool_inputs_for_file_rows ... ok
+test service::session_usage::tracking::tests::report_sums_tool_phase_timings_and_marks_phase_coverage_available ... ok
+test service::session_usage::aggregation::tests::report_active_runtime_includes_incomplete_turn_child_spans ... ok
+test service::session_usage::tracking::tests::report_slowest_tool_spans_summarize_url_inputs ... ok
+test service::session_usage::tracking::tests::report_slowest_tool_spans_include_diagnostic_fields ... ok
+test service::session_usage::format::tests::report_slowest_tool_input_summary_redacts_common_secrets ... ok
+
+test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 1044 filtered out; finished in 0.02s
+```
 
 ### 6.3 `rustup run stable-x86_64-pc-windows-msvc cargo test -p northhing-services-core`（宿主树，AC5 serde 测试）
 
@@ -125,7 +168,22 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 ```
 
 结果：lib 56/0（含 4 个新 serde 测试）+ 9 个集成测试目标 + doc-test 全绿（11 个 `test result: ok`，0 failed）。
-（另在隔离树复跑同命令作自足性复核，结果见文末追加。）
+隔离树复跑（TIP1 自足性复核，同命令）：
+
+```text
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2m 34s
+test result: ok. 56 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.91s
+```
 
 ### 6.4 `node scripts/check-repo-hygiene.mjs`（宿主树）
 
@@ -147,6 +205,16 @@ Attempt verification passed: all modified files are within allowlist.
 
 exit 0。tip 取 `f54a3fe`（本单最后**代码** commit）；report+allowlist 按 W26-3 先例以回填 commit 进场（其文件均在 allowlist 内，窗口 BASE..回填 commit 复跑结果见文末追加）。
 
+**TIP2 回填后终窗复跑（`--base 831094c --tip 7610de5`）**：
+
+```text
+Warnings:
+  - Unfulfilled allowlist entry (not modified): .superpowers/sdd/w26-2-brief.md
+Attempt verification passed: all modified files are within allowlist.
+```
+
+exit 0。brief 未进场项说明：工作树中 w26-2-brief.md 的改动系编排者续派重钉 BASE（434f9a4→831094c），非本单工作产物，故未随 TIP2 进场，留待波收口。
+
 ### rustfmt
 
 6 个进场文件逐一 `rustfmt --edition 2021 --check`（仓根 rustfmt.toml：max_width=120）全部 clean，宿主 GNU rustfmt（与 `pnpm run fmt:rs` 同一二进制）。
@@ -163,4 +231,11 @@ exit 0。tip 取 `f54a3fe`（本单最后**代码** commit）；report+allowlist
 
 ## 状态
 
-DONE_WITH_CONCERNS —— §6.1（隔离树 workspace check 0 error）/ §6.2 green 证据链（宿主非测试 check exit 0 + 宿主 15 错全在兄弟领地文件 + 隔离复跑追加中）/ §6.3（绿）/ §6.4（exit 0）/ §6.5（exit 0）之外无未决正确性疑虑；唯一未闭环项为 §6.2 隔离树复跑输出追加，结果落定后更新本行（预计 DONE）。
+DONE —— §6.1（隔离树 workspace check 0 error）/ §6.2（宿主阻断逐条披露 + §6.0 非测试 check 绿 + 隔离树 37/0 绿）/ §6.3（宿主绿 + 隔离绿）/ §6.4（exit 0）/ §6.5（exit 0，窗口 831094c..7610de5）全闭环；疑虑节各项为环境/并行观察项与本单外的边界声明，无未决正确性疑虑。
+
+## commit 后磁盘版修订（追加于 TIP2 `7610de5` 之后，未再进场）
+
+- 触发原因：报告正文按编排者续派指令承诺「§6.2/§6.3 宿主树结果 + 隔离复跑文末追加」；TIP2 落地后隔离链跑完，按承诺回填 §6.2 节 green 证据链第 2 项（37/0 全量原文）、§6.3 节隔离复跑块、状态行 DONE_WITH_CONCERNS→DONE。
+- 本节之后的磁盘修订均不改代码：TIP1 `f54a3fe`（全部源码改动）+ TIP2 `7610de5`（report/allowlist）仍是本单全部进场文件，与 `git diff 831094c..7610de5 --name-only` 一致。
+- task-gate 最终窗口复跑（TIP2 落地后即时执行，见 §6.5 下方追加）：exit 0。
+- 临时物清理：`git worktree remove C:\Windows\Temp\opencode\w26-2-verify`（隔离树内唯一额外文件为复制的 ignored 生成物 generated_locale_contract.rs，随 worktree 一并销毁，宿主树未受影响）。

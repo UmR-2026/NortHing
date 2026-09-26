@@ -20,7 +20,7 @@ ledger P2-5（docs/status/tech-debt-ledger.md:119-124）症状逐字："failure 
 
 ## 2. 编排者预检结论（逐项钉死，直接采信）
 
-BASE = `434f9a4`。
+BASE = `831094c`。
 
 | 事实 | 证据 |
 |---|---|
@@ -60,7 +60,7 @@ BASE = `434f9a4`。
 2. `rustup run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full` 相关过滤（session/persist/save 相关）→ 绿
 3. serde 兼容测试（AC5 新用例，落 dialog_turn.rs 内联 #[cfg(test)]）经 `rustup run stable-x86_64-pc-windows-msvc cargo test -p northhing-services-core` 跑 → 绿（core 测试不覆盖依赖 crate 单测，此命令必须单独跑）
 4. `node scripts/check-repo-hygiene.mjs` → exit 0
-5. `node scripts/verify-task-gate.mjs verify-attempt --base 434f9a4 --tip <本单最后 commit sha> --allowlist .superpowers/sdd/w26-2-allowlist.txt` → exit 0（自建 allowlist 含自身；**窗口内若出现其它 W26 单文件，停手报编排者复跑，不得私扩 allowlist**）
+5. `node scripts/verify-task-gate.mjs verify-attempt --base 831094c --tip <本单最后 commit sha> --allowlist .superpowers/sdd/w26-2-allowlist.txt` → exit 0（自建 allowlist 含自身；**窗口内若出现其它 W26 单文件，停手报编排者复跑，不得私扩 allowlist**）
 
 ## 7. 报告
 
@@ -68,7 +68,7 @@ BASE = `434f9a4`。
 
 ## 8. 派发元信息
 
-- BASE: `434f9a4`
+- BASE: `831094c`
 - 允许文件集：
   - `src/crates/services/services-core/src/session/dialog_turn.rs`
   - `src/crates/assembly/core/src/agentic/session/session_persistence/turn_lifecycle.rs`
