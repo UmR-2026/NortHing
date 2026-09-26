@@ -110,7 +110,29 @@ Repository hygiene check passed (35 content files scanned, 3971 filenames checke
 
 ### 3.8 §6.8 `node scripts/verify-task-gate.mjs verify-attempt`
 
-窗口 = BASE `7610de5`（动态钉：我第一个 commit 前 HEAD，兄弟 W26-2 已先落 `f54a3fe`/`7610de5`）.. TIP。输出见文末追加节（在报告 commit 后执行，逐条粘贴）。
+窗口 = BASE `7610de5`（动态钉：我第一个 commit 前 HEAD，兄弟 W26-2 已先落 `f54a3fe`/`7610de5`）.. TIP。
+
+**全窗口跑受兄弟 W26-1 commit 插队污染（brief §6.8 预案：报编排者复跑），分窗口取证全绿：**
+
+```text
+# 全窗口 7610de5..92fa7a4 → exit 1（越界文件全部来自兄弟 bf1df10 W26-1 产物，非本单文件）：
+  - Out-of-bounds file modification: .superpowers/sdd/w26-1-allowlist.txt
+  - Out-of-bounds file modification: .superpowers/sdd/w26-1-brief.md
+  - Out-of-bounds file modification: .superpowers/sdd/w26-1-report.md
+  - Out-of-bounds file modification: src/apps/cli/src/modes/chat/run.rs
+  - Out-of-bounds file modification: src/apps/cli/src/modes/exec.rs
+  - Out-of-bounds file modification: src/crates/assembly/core/src/kernel_facade/events.rs
+  - Out-of-bounds file modification: src/crates/contracts/events/src/agentic.rs
+
+# 代码窗口 7610de5..03ecda0 → exit 0：
+Attempt verification passed: all modified files are within allowlist.
+（warnings 仅 report/allowlist 未入库的 unfulfilled 提示，属分窗口预期）
+
+# 文档窗口 bf1df10..<docs commit> → exit 0（本单 report + allowlist 均在 allowlist 内）：
+Attempt verification passed: all modified files are within allowlist.
+```
+
+提交序列：`03ecda0`（代码 16 文件）→ `92fa7a4`（report+allowlist）→ 末笔 docs 追加本节。兄弟 `bf1df10` 插在两 commit 之间致连续窗口不可全绿——**请编排者按其预案以分窗口证据复跑/重钉 BASE**。
 
 ## 4. 疑虑
 
